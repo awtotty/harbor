@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "tsx watch src/server/index.ts",
     "build": "tsc && vite build",
-    "start": "node dist/server/index.js"
+    "start": "node dist/server/index.js",
+    "test": "node --import tsx --test tests/*.test.ts"
   },
   "dependencies": {
     "@earendil-works/pi-coding-agent": "^0.76.0",
