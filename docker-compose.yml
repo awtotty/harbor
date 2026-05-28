@@ -1,11 +1,13 @@
 services:
   harbor:
     build: .
+    restart: unless-stopped
     ports:
-      - "8080:8080"
-      - "2222:22"
+      - "${HARBOR_BIND_HOST:-127.0.0.1}:${HARBOR_PORT:-8080}:8080"
+      - "${HARBOR_SSH_BIND_HOST:-127.0.0.1}:${HARBOR_SSH_PORT:-2222}:22"
     environment:
-      HARBOR_PASSWORD: harbor
+      HARBOR_PASSWORD: ${HARBOR_PASSWORD:-harbor}
+      HARBOR_PRODUCTION: ${HARBOR_PRODUCTION:-false}
       HARBOR_CONFIG_DIR: /config
       HARBOR_WORKSPACE_DIR: /workspace
       HARBOR_TERMINAL_USER: agent
@@ -15,6 +17,12 @@ services:
       - harbor-workspace:/workspace
       - harbor-config:/config
       - harbor-home:/home/agent
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
 
 volumes:
   harbor-workspace:

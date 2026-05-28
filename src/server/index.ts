@@ -22,6 +22,9 @@ const password = process.env.HARBOR_PASSWORD ?? 'harbor';
 const router = new MessageRouter();
 const routeContext = { router };
 
+if (process.env.HARBOR_PRODUCTION === 'true' && password === 'harbor') {
+  throw new Error('Refusing to start in production with default HARBOR_PASSWORD=harbor. Set HARBOR_PASSWORD in .env.');
+}
 if (password === 'harbor') {
   app.log.warn('Using default HARBOR_PASSWORD=harbor. Set HARBOR_PASSWORD before exposing Harbor beyond localhost.');
 }

@@ -30,6 +30,8 @@ docker compose up --build
 
 Open http://localhost:8080.
 
+For an always-on VPS deploy over Tailscale, see `docs/DIGITALOCEAN_TAILSCALE.md`.
+
 ## Agent access
 
 Harbor intentionally gives the Pi agent broad access inside the container.
