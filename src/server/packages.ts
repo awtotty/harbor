@@ -2,6 +2,7 @@ import { spawn } from 'node:child_process';
 import { readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { piAgentDir, configDir, workspaceDir } from './config.js';
+import { recordEvent, setSystemStatus } from './db.js';
 import { loadEnvFromFile } from './config.js';
 import type { EventSink } from './types.js';
 
@@ -22,7 +23,9 @@ async function piEnv() {
 }
 
 export async function runPiPackageCommand(args: string[], sink: EventSink): Promise<void> {
-  sink({ type: 'status', text: `pi ${args.join(' ')}` });
+  const command = `pi ${args.join(' ')}`;
+  recordEvent({ source: 'packages', level: 'info', type: 'package.command_started', title: 'Package command started', metadata: { command } });
+  sink({ type: 'status', text: command });
   const child = spawn(piBin, args, { cwd: workspaceDir, env: await piEnv(), stdio: ['ignore', 'pipe', 'pipe'] });
   child.stdout.on('data', (data: Buffer) => sink({ type: 'tool_event', text: data.toString() }));
   child.stderr.on('data', (data: Buffer) => sink({ type: 'tool_event', text: data.toString() }));
@@ -30,7 +33,14 @@ export async function runPiPackageCommand(args: string[], sink: EventSink): Prom
     child.on('error', reject);
     child.on('close', resolve);
   });
-  if (code !== 0) throw new Error(`pi ${args.join(' ')} exited with code ${code}`);
+  if (code !== 0) {
+    const message = `${command} exited with code ${code}`;
+    recordEvent({ source: 'packages', level: 'error', type: 'package.command_failed', title: 'Package command failed', message, metadata: { command, code } });
+    setSystemStatus({ key: 'packages', status: 'error', summary: message, metadata: { command, code } });
+    throw new Error(message);
+  }
+  recordEvent({ source: 'packages', level: 'info', type: 'package.command_completed', title: 'Package command completed', metadata: { command } });
+  setSystemStatus({ key: 'packages', status: 'ok', summary: 'Last package command completed', metadata: { command } });
   sink({ type: 'done' });
 }
 

@@ -6,7 +6,7 @@ import { MessageBubble } from './components/ToolEvent';
 import { promptSuggestions, themes } from './constants';
 import { readEvents } from './lib/sse';
 import { formatRelativeTime } from './lib/time';
-import type { ChatMessage, EnvEntry, HarborSession, ModelOption, PiPackage, Provider, SelectedModel, Tab, TelegramConfig, TerminalInfo, Theme } from './types';
+import type { ChatMessage, EnvEntry, HarborEventLog, HarborSession, ModelOption, PiPackage, Provider, SelectedModel, SystemStatus, Tab, TelegramConfig, TerminalInfo, Theme } from './types';
 import './styles.css';
 
 function tabFromPath(pathname: string): Tab {
@@ -288,6 +288,23 @@ function Env({ token }: { token: string }) {
   return <div className="card"><div className="cardHeader"><div><h3>Environment</h3><p>Advanced environment variables and secrets stored in /config/harbor.env.</p></div></div>{entries.map((entry, i) => <div className="env" key={i}><input placeholder="KEY" value={entry.key} onChange={(e) => setEntries(entries.map((x, n) => n === i ? { ...x, key: e.target.value } : x))} /><input placeholder="value" value={entry.value} onChange={(e) => setEntries(entries.map((x, n) => n === i ? { ...x, value: e.target.value } : x))} /></div>)}<div className="buttonRow"><button onClick={() => setEntries([...entries, { key: '', value: '' }])}>Add variable</button><button onClick={save}>Save</button></div></div>;
 }
 
-function System({ token }: { token: string }) { const [status, setStatus] = useState<unknown>(); useEffect(() => { void fetch('/api/status', { headers: { Authorization: `Bearer ${token}` } }).then((r) => r.json()).then(setStatus); }, [token]); return <section className="settingsScreen"><div className="screenHeader"><h2>System</h2><p>Container paths, runtime status, and operational details.</p></div><div className="card"><pre>{JSON.stringify(status, null, 2)}</pre></div></section>; }
+function System({ token }: { token: string }) {
+  const [status, setStatus] = useState<unknown>();
+  const [systems, setSystems] = useState<SystemStatus[]>([]);
+  const [events, setEvents] = useState<HarborEventLog[]>([]);
+  async function load() {
+    const headers = { Authorization: `Bearer ${token}` };
+    const [statusRes, systemsRes, eventsRes] = await Promise.all([
+      fetch('/api/status', { headers }),
+      fetch('/api/observability/status', { headers }),
+      fetch('/api/observability/events?limit=80', { headers }),
+    ]);
+    if (statusRes.ok) setStatus(await statusRes.json());
+    if (systemsRes.ok) setSystems((await systemsRes.json()).systems ?? []);
+    if (eventsRes.ok) setEvents((await eventsRes.json()).events ?? []);
+  }
+  useEffect(() => { void load(); }, [token]);
+  return <section className="settingsScreen"><div className="screenHeader"><h2>System</h2><p>Container paths, runtime status, recent events, and operational details.</p><button onClick={load}>Refresh</button></div><div className="statusGrid">{systems.map((system) => <div className={`statusCard ${system.status}`} key={system.key}><strong>{system.key}</strong><span>{system.status}</span><p>{system.summary}</p><small>{formatRelativeTime(system.updatedAt)}</small></div>)}</div><div className="card"><div className="cardHeader"><div><h3>Recent events</h3><p>Structured Harbor events visible to the web UI and agent.</p></div></div><div className="eventTable">{events.map((event) => <div className={`eventRow ${event.level}`} key={event.id}><span>{formatRelativeTime(event.createdAt)}</span><code>{event.source}</code><strong>{event.title}</strong><small>{event.message ?? event.type}</small></div>)}</div></div><div className="card"><pre>{JSON.stringify(status, null, 2)}</pre></div></section>;
+}
 
 createRoot(document.getElementById('root')!).render(<App />);

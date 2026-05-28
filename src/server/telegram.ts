@@ -1,4 +1,5 @@
 import { readHarborConfig, writeHarborConfig, type TelegramConfig } from './app-config.js';
+import { recordEvent, setSystemStatus } from './db.js';
 import { MessageRouter } from './router.js';
 import { sendChatMessage } from './chat-service.js';
 
@@ -29,6 +30,8 @@ export async function testTelegramToken(botToken?: string): Promise<Awaited<Retu
     botInfo: { id: String(data.result.id), username: data.result.username, firstName: data.result.first_name },
   };
   await writeHarborConfig(config);
+  recordEvent({ source: 'telegram', level: 'info', type: 'telegram.token_tested', title: 'Telegram bot token tested', metadata: { username: data.result.username } });
+  setSystemStatus({ key: 'telegram', status: 'ok', summary: `Configured @${data.result.username ?? data.result.first_name}`, metadata: { username: data.result.username } });
   return getTelegramConfig();
 }
 
@@ -39,6 +42,8 @@ export async function allowTelegramUser(userId: string): Promise<Awaited<ReturnT
   allowed.add(userId.trim());
   config.telegram = { ...telegram, enabled: true, allowedUsers: [...allowed].filter(Boolean) };
   await writeHarborConfig(config);
+  recordEvent({ source: 'telegram', level: 'info', type: 'telegram.user_allowed', title: 'Telegram user allowed', metadata: { userId: userId.trim() } });
+  setSystemStatus({ key: 'telegram', status: 'ok', summary: 'Telegram bot enabled', metadata: { allowedUsers: config.telegram.allowedUsers?.length ?? 0 } });
   return getTelegramConfig();
 }
 
@@ -68,6 +73,7 @@ async function telegramLoop(router: MessageRouter, log: Log): Promise<void> {
       const config = await readHarborConfig();
       const telegram = config.telegram;
       if (telegram?.botToken) {
+        setSystemStatus({ key: 'telegram', status: telegram.enabled ? 'ok' : 'disabled', summary: telegram.enabled ? 'Telegram bot polling' : 'Telegram bot configured but disabled', metadata: { lastPollAt: new Date().toISOString(), allowedUsers: telegram.allowedUsers?.length ?? 0 } });
         const updates = await telegramApi(telegram.botToken, 'getUpdates', { timeout: 25, offset: telegram.offset ?? 0 });
         for (const update of updates.result ?? []) {
           try {
@@ -87,6 +93,9 @@ async function telegramLoop(router: MessageRouter, log: Log): Promise<void> {
         await sleep(3000);
       }
     } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      recordEvent({ source: 'telegram', level: 'error', type: 'telegram.poll_failed', title: 'Telegram polling failed', message });
+      setSystemStatus({ key: 'telegram', status: 'error', summary: message });
       log.error({ error }, 'telegram bot polling failed');
       await sleep(5000);
     }
@@ -101,6 +110,7 @@ async function handleUpdate(router: MessageRouter, log: Log, update: any, botTok
   if (!text || !chatId || !user?.id) return;
   await rememberSender(user);
   const userId = String(user.id);
+  recordEvent({ source: 'telegram', level: 'info', type: 'telegram.message_received', title: 'Telegram message received', metadata: { userId, chatId } });
   const config = await readHarborConfig();
   if (!config.telegram?.enabled) {
     log.info({ userId }, 'recorded telegram sender; bot disabled');

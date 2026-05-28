@@ -12,6 +12,7 @@ import { registerProviderRoutes } from './routes/provider-routes.js';
 import { registerSessionRoutes } from './routes/session-routes.js';
 import { registerTerminalRoutes } from './routes/terminal-routes.js';
 import { registerTelegramRoutes } from './routes/telegram-routes.js';
+import { recordStartupStatus, registerObservabilityRoutes } from './routes/observability-routes.js';
 import { startTelegramBot } from './telegram.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -31,7 +32,7 @@ function isAuthed(auth?: string): boolean {
 }
 
 app.addHook('preHandler', async (request, reply) => {
-  if (request.url.startsWith('/api/login') || !request.url.startsWith('/api/')) return;
+  if (request.url === '/healthz' || request.url.startsWith('/api/login') || !request.url.startsWith('/api/')) return;
   if (!isAuthed(request.headers.authorization)) return reply.code(401).send({ error: 'Unauthorized' });
 });
 
@@ -54,7 +55,9 @@ await registerPackageRoutes(app, routeContext);
 await registerSessionRoutes(app);
 await registerTerminalRoutes(app);
 await registerTelegramRoutes(app);
+await registerObservabilityRoutes(app);
 await registerChatRoutes(app, routeContext);
+recordStartupStatus();
 startTelegramBot(router, app.log);
 
 const webRoot = join(__dirname, '../web');

@@ -1,4 +1,4 @@
-import { appendMessageText, insertMessage } from './db.js';
+import { appendMessageText, insertMessage, recordEvent } from './db.js';
 import { MessageRouter } from './router.js';
 import type { ChannelName, EventSink, HarborEvent } from './types.js';
 
@@ -13,7 +13,9 @@ export type SendChatInput = {
 
 export async function sendChatMessage(input: SendChatInput): Promise<void> {
   const { router, sessionId, channel, senderId, text, sink } = input;
+  const correlationId = crypto.randomUUID();
   insertMessage({ id: crypto.randomUUID(), sessionId, role: 'user', channel, senderId, text });
+  recordEvent({ source: channel, level: 'info', type: 'chat.message_received', title: 'Message received', sessionId, correlationId, metadata: { senderId } });
   let assistantMessageId: string | undefined;
 
   const persistAndSend = (event: HarborEvent) => {
@@ -33,5 +35,11 @@ export async function sendChatMessage(input: SendChatInput): Promise<void> {
     sink(event);
   };
 
-  await router.handle({ channel, senderId, workspaceId: 'default', sessionId, text }, persistAndSend);
+  try {
+    await router.handle({ channel, senderId, workspaceId: 'default', sessionId, text }, persistAndSend);
+    recordEvent({ source: channel, level: 'info', type: 'chat.message_completed', title: 'Message completed', sessionId, correlationId, metadata: { senderId } });
+  } catch (error) {
+    recordEvent({ source: channel, level: 'error', type: 'chat.message_failed', title: 'Message failed', message: error instanceof Error ? error.message : String(error), sessionId, correlationId, metadata: { senderId } });
+    throw error;
+  }
 }
