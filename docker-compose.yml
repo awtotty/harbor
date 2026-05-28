@@ -14,7 +14,9 @@ services:
     volumes:
       - harbor-workspace:/workspace
       - harbor-config:/config
+      - harbor-home:/home/agent
 
 volumes:
   harbor-workspace:
   harbor-config:
+  harbor-home:

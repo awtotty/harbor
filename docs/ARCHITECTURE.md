@@ -6,6 +6,15 @@ Harbor is a Dockerized Pi cloud-agent appliance. The container starts SSH as roo
 
 - `/workspace` — user projects and working files.
 - `/config` — persistent Harbor and Pi state.
+- `/home/agent` — persistent shell home for CLI auth, dotfiles, history, and user-level tool state.
+
+Harbor also prepends these persistent/custom paths to `PATH`:
+
+- `/config/bin` — recommended location for custom persistent scripts/binaries.
+- `/home/agent/.local/bin` — user-local tools installed by the `agent` user.
+- `/app/node_modules/.bin` — Harbor/Pi project CLIs.
+
+Container image layers are still ephemeral. Tools installed with `apt` inside a running container do not survive rebuilds unless added to the Dockerfile or reinstalled by the user. CLI auth and config under `/home/agent` will persist.
 
 ## Core flows
 

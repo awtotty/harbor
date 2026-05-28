@@ -1,62 +1,126 @@
 # Harbor Roadmap
 
-Harbor is an open-source, self-hostable cloud agent appliance built around Pi. The goal is to give individuals and teams a personal AI computer they control: reachable from the web, Signal, and SSH, with an optional hosted version for convenience and managed compute.
+Harbor is an open-source, Docker-first, self-hostable Pi cloud agent appliance. The goal is to give individuals and teams an always-on personal AI computer they control: reachable from a private web UI, SSH, terminal, and messaging channels, with an optional hosted version later for convenience and managed compute.
 
-## Phase 1: Personal Deploy
+## Phase 1: Personal Appliance Prototype
 
-Get Harbor working for a single power user.
+Get Harbor working for a single power user on a local machine.
 
 - Docker Compose setup
-- Pi installed and runnable inside the container
-- Persistent workspace and config volumes
-- SSH access into the container
-- Lightweight web UI with authentication
-- Environment/secrets configuration page
-- Browser chat with the Pi agent
-- Basic logs and system status
+- Pi SDK-backed browser chat
+- Persistent `/workspace` and `/config` volumes
+- SQLite app state and transcript storage
+- Session list/new/archive basics
+- OpenAI subscription login and model selection
+- Pi package management
+- SSH authorized key setup
+- Real web terminal backed by PTY
+- Multiple UI themes
+- Telegram bot channel for messaging the agent
 
-Success means: one person can deploy Harbor on a VPS or home server and use it as their own cloud agent.
+Success means: one person can run Harbor locally, chat with Pi from the browser or Telegram, and use it for real work inside `/workspace`.
 
-## Phase 2: Signal MVP
+Status: mostly implemented; continue dogfooding and fixing friction.
 
-Make Signal a first-class channel for interacting with the agent remotely.
+## Phase 2: VPS + Tailscale Always-On Deploy
 
-- Signal integration via a channel adapter
-- Allowlisted Signal senders
-- Route incoming Signal messages to a Pi session
-- Send agent responses back over Signal
-- Maintain conversation/session state
-- Add confirmation flow for risky actions
-- Show Signal status/configuration in the web UI
+Deploy Harbor to a private VPS behind Tailscale before broader product polish. This tests the core product hypothesis: an always-on personal agent appliance reachable privately from anywhere.
 
-Success means: the user can reliably message their Harbor agent from Signal and have it perform useful work.
+- VPS deployment guide for Ubuntu/Debian
+- Docker and Docker Compose install steps
+- Tailscale setup and MagicDNS guidance
+- `.env`-based production configuration
+- Compose settings for VPS use:
+  - `restart: unless-stopped`
+  - persistent named volumes or documented bind mounts
+  - explicit password configuration
+- Firewall guidance:
+  - expose Harbor only over Tailscale
+  - restrict SSH to Tailscale where possible
+- Backup and restore docs for:
+  - `/config`
+  - `/workspace`
+- Operational runbook:
+  - update Harbor
+  - restart Harbor
+  - view logs
+  - rebuild image
+  - inspect database/config
+- Tailscale-aware System UI if available:
+  - show Tailscale IP / hostname
+  - show suggested private URL
+- Production safety checks:
+  - warn or fail when `HARBOR_PASSWORD=harbor` in production mode
+  - document secret-bearing files in `/config`
 
-## Phase 3: Teammate-Ready Self-Host
+Success means: Harbor can run unattended on a VPS, survive restarts, and be reachable from the user's devices through Tailscale without exposing the web UI publicly.
 
-Turn the personal setup into something teammates can deploy and trust.
+## Phase 3: Dogfood Hardening + Product Polish
+
+Use daily workflow friction to harden the appliance.
+
+- Better error surfaces for chat, packages, Telegram, and provider auth
+- Telegram status in Config:
+  - last poll
+  - last message
+  - last error
+- Telegram commands:
+  - `/help`
+  - `/new`
+  - `/sessions`
+  - `/use <session>`
+- Working/status feedback for messaging channels
+- Rename sessions
+- Archived sessions UI
+- Transcript search/export
+- Mobile web polish
+- PWA install support
+- Terminal UX polish:
+  - names
+  - reconnect behavior
+  - cwd/status display
+- Config reset actions:
+  - reset Telegram token
+  - clear auth/model config
+- Safer env editor
+- Better package install/update progress
+
+Success means: Harbor feels reliable enough for everyday personal workflows, both from browser and phone.
+
+## Phase 4: Teammate-Ready Self-Host
+
+Turn the personal setup into something technical teammates can deploy and trust.
 
 - Clear setup documentation
-- Setup wizard or guided first-run flow
-- Safer permission defaults
-- Better logging and diagnostics
+- Guided first-run checklist
 - Backup/export support
-- Extension bundle management
-- Workspace/file inspection
-- Update process
+- Upgrade process
+- Better logging and diagnostics
+- Permission/security docs
+- Extension/package bundle management
+- Workspace/file inspection improvements
+- Multi-user/team access model exploration
+- Optional OAuth or reverse-proxy auth docs
 
 Success means: technical teammates can self-host Harbor without hand-holding and use it for real work.
 
-## Phase 4: Hosted Utility Version
+## Phase 5: Hosted Utility Version
 
 Offer Harbor as a managed service while preserving the open-source self-hosted core.
 
 - Managed hosted instances
 - Persistent storage and backups
 - Remote access without manual server setup
-- Managed Signal/SMS relay options
 - Hosted model routing
+- Messaging channel management
 - Usage dashboard
 - Utility-style metered billing
 - Data export and migration path back to self-hosting
 
 Success means: users can either self-host Harbor for free or pay for managed convenience, uptime, and compute.
+
+## Deferred / Reconsider Later
+
+### Signal
+
+Signal linked-device mode works poorly for the desired use case because a linked device is not a separate recipient the same user can message. A dedicated Signal bot-like account requires another phone number. Keep Signal deferred unless there is a clear user need and acceptable setup story.

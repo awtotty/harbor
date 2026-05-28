@@ -1,6 +1,6 @@
 # Harbor
 
-Harbor is a self-hostable cloud agent appliance built around Pi. It starts as a lightweight web UI over a persistent Pi session with `/workspace` and `/config` volumes, and is designed to add Signal and other channels through the same message router.
+Harbor is a self-hostable cloud agent appliance built around Pi. It starts as a lightweight web UI over persistent Pi sessions with `/workspace`, `/config`, and `/home/agent` volumes, and supports messaging channels through the same message router.
 
 ## Prototype features
 
@@ -15,9 +15,9 @@ Harbor is a self-hostable cloud agent appliance built around Pi. It starts as a 
 ## Run locally
 
 ```bash
-npm install
-npm run build
-HARBOR_CONFIG_DIR=$PWD/.config HARBOR_WORKSPACE_DIR=$PWD/workspace npm start
+pnpm install
+pnpm run build
+HARBOR_CONFIG_DIR=$PWD/.config HARBOR_WORKSPACE_DIR=$PWD/workspace pnpm start
 ```
 
 Open http://localhost:8080 and log in with `harbor` unless `HARBOR_PASSWORD` is set.
@@ -42,13 +42,15 @@ Persistent paths:
 - `/config/harbor.env` — env/secrets file
 - `/config/pi-agent` — Pi auth/config
 - `/config/sessions` — Pi native sessions
+- `/config/bin` — persistent custom scripts/binaries on `PATH`
+- `/home/agent` — persistent shell home, CLI auth/config, dotfiles, and history
 
-The image includes `sqlite3`, `curl`, and `jq` so the agent can inspect Harbor state and call local APIs when useful.
+The image includes common agent/terminal tools such as `git`, `gh`, `sqlite3`, `curl`, `jq`, `rg`, `fd`, `vim`, `tmux`, `rsync`, `tree`, and network/debugging utilities. See `docs/PERSISTENCE.md` for what survives rebuilds and where to put custom tools.
 
 ## Notes
 
 The web chat routes through the same internal message router that Signal will use later:
 
 ```text
-web / signal / future channels -> MessageRouter -> PiSessionRegistry -> Pi SDK session
+web / telegram / future channels -> MessageRouter -> PiSessionRegistry -> Pi SDK session
 ```
