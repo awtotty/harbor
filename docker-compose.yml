@@ -1,0 +1,20 @@
+services:
+  harbor:
+    build: .
+    ports:
+      - "8080:8080"
+      - "2222:22"
+    environment:
+      HARBOR_PASSWORD: harbor
+      HARBOR_CONFIG_DIR: /config
+      HARBOR_WORKSPACE_DIR: /workspace
+      HARBOR_TERMINAL_USER: agent
+      PI_CODING_AGENT_DIR: /config/pi-agent
+      PI_CODING_AGENT_SESSION_DIR: /config/sessions
+    volumes:
+      - harbor-workspace:/workspace
+      - harbor-config:/config
+
+volumes:
+  harbor-workspace:
+  harbor-config:

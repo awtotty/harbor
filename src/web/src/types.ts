@@ -1,0 +1,10 @@
+export type EnvEntry = { key: string; value: string };
+export type Tab = 'chat' | 'terminal' | 'config' | 'system';
+export type Theme = 'harbor' | 'folio' | 'terminal' | 'atelier' | 'brutal';
+export type Provider = { id: string; name: string; auth: { configured: boolean; source?: string; label?: string } };
+export type ModelOption = { provider: string; id: string; name: string; displayName: string; reasoning: boolean };
+export type PiPackage = { source: string; path?: string };
+export type SelectedModel = { provider: string; id: string } | undefined;
+export type ChatMessage = { id: string; role: 'user' | 'assistant' | 'event'; text: string; kind?: 'status' | 'tool' | 'error' | null };
+export type HarborSession = { id: string; name: string; updatedAt: string };
+export type TerminalInfo = { id: string; name: string; createdAt: string; alive: boolean };

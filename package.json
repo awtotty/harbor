@@ -1,0 +1,29 @@
+{
+  "name": "harbor",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server/index.ts",
+    "build": "tsc && vite build",
+    "start": "node dist/server/index.js"
+  },
+  "dependencies": {
+    "@earendil-works/pi-coding-agent": "^0.76.0",
+    "@fastify/static": "latest",
+    "@vitejs/plugin-react": "latest",
+    "@xterm/xterm": "^6.0.0",
+    "fastify": "latest",
+    "node-pty": "^1.1.0",
+    "react": "latest",
+    "react-dom": "latest",
+    "tsx": "latest",
+    "typescript": "latest",
+    "vite": "latest"
+  },
+  "devDependencies": {
+    "@types/node": "latest",
+    "@types/react": "latest",
+    "@types/react-dom": "latest"
+  }
+}
