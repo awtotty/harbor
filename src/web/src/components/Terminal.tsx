@@ -10,7 +10,9 @@ export function Terminal({ token, terminalId, onClose }: { token: string; termin
     term.open(containerRef.current);
     term.focus();
     void fetch(`/api/terminals/${terminalId}/resize`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ cols: term.cols, rows: term.rows }) });
+    const replaying = { current: false };
     const dataDisposable = term.onData((input) => {
+      if (replaying.current) return;
       void fetch(`/api/terminals/${terminalId}/input`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ input }) });
     });
     const controller = new AbortController();
@@ -26,10 +28,17 @@ export function Terminal({ token, terminalId, onClose }: { token: string; termin
         const events = buffer.split('\n\n');
         buffer = events.pop() ?? '';
         for (const event of events) {
+          const eventName = event.split('\n').find((l) => l.startsWith('event: '))?.slice(7);
           const line = event.split('\n').find((l) => l.startsWith('data: '));
           if (!line) continue;
           const data = JSON.parse(line.slice(6));
-          if (data.chunk) term.write(data.chunk);
+          if (!data.chunk) continue;
+          if (eventName === 'replay') {
+            replaying.current = true;
+            term.write(data.chunk, () => { replaying.current = false; });
+          } else {
+            term.write(data.chunk);
+          }
         }
       }
     }).catch(() => undefined);

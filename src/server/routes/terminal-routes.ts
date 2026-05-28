@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { closeTerminal, createTerminal, listTerminals, resizeTerminal, subscribeTerminal, writeTerminal } from '../terminals.js';
+import { closeTerminal, createTerminal, getTerminalReplay, listTerminals, resizeTerminal, subscribeTerminal, writeTerminal } from '../terminals.js';
 
 export async function registerTerminalRoutes(app: FastifyInstance) {
   app.get('/api/terminals', async () => ({ terminals: listTerminals() }));
@@ -26,10 +26,19 @@ export async function registerTerminalRoutes(app: FastifyInstance) {
   app.get('/api/terminals/:terminalId/stream', async (request, reply) => {
     const { terminalId } = request.params as { terminalId: string };
     reply.raw.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache, no-transform', Connection: 'keep-alive' });
+    const replay = getTerminalReplay(terminalId);
+    if (replay === undefined) {
+      reply.raw.write(`event: error\n`);
+      reply.raw.write(`data: ${JSON.stringify({ error: 'Terminal not found' })}\n\n`);
+      reply.raw.end();
+      return;
+    }
+    reply.raw.write(`event: replay\n`);
+    reply.raw.write(`data: ${JSON.stringify({ chunk: replay })}\n\n`);
     const unsubscribe = subscribeTerminal(terminalId, (chunk) => {
       reply.raw.write(`event: chunk\n`);
       reply.raw.write(`data: ${JSON.stringify({ chunk })}\n\n`);
-    });
+    }, { replay: false });
     if (!unsubscribe) {
       reply.raw.write(`event: error\n`);
       reply.raw.write(`data: ${JSON.stringify({ error: 'Terminal not found' })}\n\n`);

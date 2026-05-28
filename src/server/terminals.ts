@@ -2,6 +2,7 @@ import os from 'node:os';
 import { execFileSync } from 'node:child_process';
 import pty, { type IPty, type IPtyForkOptions } from 'node-pty';
 import { workspaceDir } from './config.js';
+import { recordEvent, setSystemStatus } from './db.js';
 
 export type TerminalInfo = { id: string; name: string; createdAt: string; alive: boolean };
 type Terminal = TerminalInfo & { pty: IPty; listeners: Set<(chunk: string) => void>; buffer: string[] };
@@ -60,6 +61,8 @@ export function createTerminal(): TerminalInfo {
   });
   proc.write('cd /workspace\r');
   terminals.set(id, terminal);
+  recordEvent({ source: 'terminal', level: 'info', type: 'terminal.created', title: 'Terminal created', metadata: { terminalId: id, user: terminalUser } });
+  setSystemStatus({ key: 'terminals', status: 'ok', summary: `${terminals.size} terminal(s) tracked`, metadata: { count: terminals.size } });
   return { id, name, createdAt, alive: true };
 }
 
@@ -82,13 +85,19 @@ export function closeTerminal(id: string): boolean {
   if (!terminal) return false;
   terminal.pty.kill();
   terminals.delete(id);
+  recordEvent({ source: 'terminal', level: 'info', type: 'terminal.closed', title: 'Terminal closed', metadata: { terminalId: id } });
+  setSystemStatus({ key: 'terminals', status: 'ok', summary: `${terminals.size} terminal(s) tracked`, metadata: { count: terminals.size } });
   return true;
 }
 
-export function subscribeTerminal(id: string, listener: (chunk: string) => void): (() => void) | undefined {
+export function getTerminalReplay(id: string): string | undefined {
+  return terminals.get(id)?.buffer.join('');
+}
+
+export function subscribeTerminal(id: string, listener: (chunk: string) => void, options: { replay?: boolean } = { replay: true }): (() => void) | undefined {
   const terminal = terminals.get(id);
   if (!terminal) return undefined;
-  listener(terminal.buffer.join(''));
+  if (options.replay !== false) listener(terminal.buffer.join(''));
   terminal.listeners.add(listener);
   return () => terminal.listeners.delete(listener);
 }
