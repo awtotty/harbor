@@ -11,6 +11,8 @@ import { registerPackageRoutes } from './routes/package-routes.js';
 import { registerProviderRoutes } from './routes/provider-routes.js';
 import { registerSessionRoutes } from './routes/session-routes.js';
 import { registerTerminalRoutes } from './routes/terminal-routes.js';
+import { registerTelegramRoutes } from './routes/telegram-routes.js';
+import { startTelegramBot } from './telegram.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = Fastify({ logger: true });
@@ -51,7 +53,9 @@ await registerProviderRoutes(app, routeContext);
 await registerPackageRoutes(app, routeContext);
 await registerSessionRoutes(app);
 await registerTerminalRoutes(app);
+await registerTelegramRoutes(app);
 await registerChatRoutes(app, routeContext);
+startTelegramBot(router, app.log);
 
 const webRoot = join(__dirname, '../web');
 app.register(fastifyStatic, { root: webRoot, wildcard: false });

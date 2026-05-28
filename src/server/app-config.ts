@@ -2,11 +2,21 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { configDir, ensureConfigDir } from './config.js';
 
+export type TelegramConfig = {
+  enabled?: boolean;
+  botToken?: string;
+  allowedUsers?: string[];
+  offset?: number;
+  recentSenders?: Array<{ id: string; name: string; lastSeenAt: string }>;
+  botInfo?: { id: string; username?: string; firstName?: string };
+};
+
 export type HarborConfig = {
   selectedModel?: {
     provider: string;
     id: string;
   };
+  telegram?: TelegramConfig;
 };
 
 const harborConfigPath = `${configDir}/harbor.json`;

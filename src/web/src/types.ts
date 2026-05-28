@@ -8,3 +8,4 @@ export type SelectedModel = { provider: string; id: string } | undefined;
 export type ChatMessage = { id: string; role: 'user' | 'assistant' | 'event'; text: string; kind?: 'status' | 'tool' | 'error' | null };
 export type HarborSession = { id: string; name: string; updatedAt: string };
 export type TerminalInfo = { id: string; name: string; createdAt: string; alive: boolean };
+export type TelegramConfig = { enabled?: boolean; configured?: boolean; allowedUsers?: string[]; recentSenders?: Array<{ id: string; name: string; lastSeenAt: string }>; botInfo?: { id: string; username?: string; firstName?: string } };

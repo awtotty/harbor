@@ -1,4 +1,4 @@
-export type ChannelName = 'web' | 'signal';
+export type ChannelName = 'web' | 'signal' | 'telegram';
 
 export type HarborMessage = {
   channel: ChannelName;

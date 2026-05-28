@@ -6,7 +6,7 @@ import { MessageBubble } from './components/ToolEvent';
 import { promptSuggestions, themes } from './constants';
 import { readEvents } from './lib/sse';
 import { formatRelativeTime } from './lib/time';
-import type { ChatMessage, EnvEntry, HarborSession, ModelOption, PiPackage, Provider, SelectedModel, Tab, TerminalInfo, Theme } from './types';
+import type { ChatMessage, EnvEntry, HarborSession, ModelOption, PiPackage, Provider, SelectedModel, Tab, TelegramConfig, TerminalInfo, Theme } from './types';
 import './styles.css';
 
 function tabFromPath(pathname: string): Tab {
@@ -175,7 +175,7 @@ function Chat({ token, sessionId, sessions, onSessionActivity, onArchiveSession,
   return <section className="chatScreen"><div className="chatHeader"><div><h2>{activeSession?.name ?? 'Session'}</h2><p><code>/workspace</code> · <span>{sessionId}</span></p></div><div className="chatActions"><button className="ghost" onClick={onArchiveSession} disabled={busy || !canArchive}>Archive</button></div></div><div className="messageList">{messages.length === 0 && <div className="empty"><h3>Start a working session</h3><p>Ask Harbor to inspect files, run commands, review changes, or build something in this workspace.</p><div className="suggestions">{promptSuggestions.map((suggestion) => <button key={suggestion} onClick={() => setDraft(suggestion)}>{suggestion}</button>)}</div></div>}{messages.map((m) => <MessageBubble key={m.id} message={m} />)}<div ref={bottomRef} /></div><form className="composer" onSubmit={send}><textarea value={draft} onChange={(e) => setDraft(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void send(); } }} placeholder="Message Pi…" /><div className="composerFooter"><span>Enter to send · Shift+Enter for newline</span><button disabled={busy || !draft.trim()}>{busy ? 'Working…' : 'Send ↵'}</button></div></form></section>;
 }
 
-function Config({ token }: { token: string }) { return <section className="settingsScreen"><div className="screenHeader"><h2>Config</h2><p>Manage model providers, selected model, Pi packages, SSH access, and environment.</p></div><Providers token={token} /><Models token={token} /><Packages token={token} /><SshKeys token={token} /><Env token={token} /></section>; }
+function Config({ token }: { token: string }) { return <section className="settingsScreen"><div className="screenHeader"><h2>Config</h2><p>Manage model providers, selected model, channels, Pi packages, SSH access, and environment.</p></div><Providers token={token} /><Models token={token} /><TelegramSettings token={token} /><Packages token={token} /><SshKeys token={token} /><Env token={token} /></section>; }
 
 function Providers({ token }: { token: string }) {
   const [providers, setProviders] = useState<Provider[]>([]);
@@ -212,6 +212,41 @@ function Models({ token }: { token: string }) {
   useEffect(() => { void load(); }, [token]);
   async function save(value: string) { const index = value.indexOf('/'); if (index === -1) return; const provider = value.slice(0, index); const id = value.slice(index + 1); await fetch('/api/models/select', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ provider, id }) }); await load(); }
   return <div className="card"><div className="cardHeader"><div><h3>Model</h3><p>Choose the default model for new Pi session activity.</p></div><span className="statusBadge good">{models.length} available</span></div><select value={selectedValue} onChange={(e) => save(e.target.value)}><option value="">Auto-select first available model</option>{models.map((model) => <option key={`${model.provider}/${model.id}`} value={`${model.provider}/${model.id}`}>{model.displayName}</option>)}</select><small>Log in to a provider if this list is empty.</small></div>;
+}
+
+function TelegramSettings({ token }: { token: string }) {
+  const [telegram, setTelegram] = useState<TelegramConfig>({ allowedUsers: [] });
+  const [botToken, setBotToken] = useState('');
+  const [allowedUsers, setAllowedUsers] = useState('');
+  const [error, setError] = useState('');
+  const load = () => fetch('/api/telegram', { headers: { Authorization: `Bearer ${token}` } }).then((r) => r.ok ? r.json() : {}).then((d: TelegramConfig) => { setTelegram(d); setAllowedUsers((d.allowedUsers ?? []).join('\n')); });
+  useEffect(() => { void load(); }, [token]);
+  async function save() {
+    setError('');
+    const res = await fetch('/api/telegram', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ enabled: telegram.enabled, botToken, allowedUsers }) });
+    const data = await res.json();
+    setTelegram(data);
+    setBotToken('');
+    setAllowedUsers((data.allowedUsers ?? []).join('\n'));
+  }
+  async function testToken() {
+    setError('');
+    const res = await fetch('/api/telegram/test', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ botToken }) });
+    const data = await res.json();
+    if (!res.ok) return setError(data.error ?? 'Telegram token test failed');
+    setTelegram(data);
+    setBotToken('');
+  }
+  async function useSender(senderId: string) {
+    setError('');
+    const res = await fetch('/api/telegram/allow-user', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ userId: senderId }) });
+    const data = await res.json();
+    if (!res.ok) return setError(data.error ?? 'Failed to allow sender');
+    setTelegram(data);
+    setAllowedUsers((data.allowedUsers ?? []).join('\n'));
+  }
+  const botUrl = telegram.botInfo?.username ? `https://t.me/${telegram.botInfo.username}` : 'https://t.me/BotFather';
+  return <div className="card"><div className="cardHeader"><div><h3>Telegram</h3><p>Fast setup: create a bot, message it once, then approve yourself.</p></div><span className={telegram.enabled ? 'statusBadge good' : 'statusBadge'}>{telegram.enabled ? 'Enabled' : telegram.configured ? 'Configured' : 'Not configured'}</span></div><div className="setupSteps"><div><span className={telegram.configured ? 'step done' : 'step'}>1</span><strong>Create bot</strong><p>Open @BotFather, send <code>/newbot</code>, then paste the token below.</p><a href="https://t.me/BotFather" target="_blank">Open BotFather</a></div><div><span className={telegram.botInfo ? 'step done' : 'step'}>2</span><strong>Test token</strong><input value={botToken} onChange={(e) => setBotToken(e.target.value)} placeholder={telegram.configured ? 'Token configured — paste a new one to replace' : 'Bot token from @BotFather'} /><div className="buttonRow"><button onClick={testToken}>Save & test token</button></div>{telegram.botInfo && <small>Connected to @{telegram.botInfo.username ?? telegram.botInfo.firstName}</small>}</div><div><span className={(telegram.recentSenders ?? []).length ? 'step done' : 'step'}>3</span><strong>Message bot</strong><p>Send any message to your bot, then refresh senders.</p><a href={botUrl} target="_blank">Open {telegram.botInfo?.username ? `@${telegram.botInfo.username}` : 'bot'}</a><div className="buttonRow"><button className="ghost" onClick={load}>Refresh recent senders</button></div></div><div><span className={(telegram.allowedUsers ?? []).length ? 'step done' : 'step'}>4</span><strong>Approve yourself</strong><div className="recentSenders">{(telegram.recentSenders ?? []).length === 0 && <small>No recent senders yet.</small>}{(telegram.recentSenders ?? []).map((sender) => <button className="copyLine" key={sender.id} onClick={() => useSender(sender.id)}><code>{sender.id}</code><span>{sender.name}</span><small>{(telegram.allowedUsers ?? []).includes(sender.id) ? 'Allowed' : 'Use me'}</small></button>)}</div></div></div><details><summary>Advanced</summary><label className="checkRow"><input type="checkbox" checked={Boolean(telegram.enabled)} onChange={(e) => setTelegram({ ...telegram, enabled: e.target.checked })} /> Enable Telegram bot</label><textarea className="keyBox" value={allowedUsers} onChange={(e) => setAllowedUsers(e.target.value)} placeholder="Allowed Telegram user IDs, one per line." /><div className="buttonRow"><button onClick={save}>Save advanced settings</button></div></details>{error && <pre className="errorBlock">{error}</pre>}</div>;
 }
 
 function Packages({ token }: { token: string }) {
