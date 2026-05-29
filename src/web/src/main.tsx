@@ -160,13 +160,15 @@ function Chat({ token, sessionId, sessions, onSessionActivity, onArchiveSession,
     setDraft('');
     setBusy(true);
     addMessage({ id: crypto.randomUUID(), role: 'user', text: message });
-    const res = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ message, sessionId }) });
-    await readEvents(res, (data) => {
-      if (data.type === 'assistant_delta') appendAssistant(data.text);
-      if (data.type === 'tool_event') addMessage({ id: crypto.randomUUID(), role: 'event', kind: 'tool', text: data.text.trim() });
-      if (data.type === 'status') addMessage({ id: crypto.randomUUID(), role: 'event', kind: 'status', text: data.text });
-      if (data.type === 'error') addMessage({ id: crypto.randomUUID(), role: 'event', kind: 'error', text: data.message });
-    });
+    const res = await fetch('/api/chat-json', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ message, sessionId }) });
+    const data = await res.json();
+    for (const event of data.events ?? []) {
+      if (event.type === 'assistant_delta') appendAssistant(event.text);
+      if (event.type === 'tool_event') addMessage({ id: crypto.randomUUID(), role: 'event', kind: 'tool', text: event.text.trim() });
+      if (event.type === 'status') addMessage({ id: crypto.randomUUID(), role: 'event', kind: 'status', text: event.text });
+      if (event.type === 'error') addMessage({ id: crypto.randomUUID(), role: 'event', kind: 'error', text: event.message });
+    }
+    if (!res.ok) addMessage({ id: crypto.randomUUID(), role: 'event', kind: 'error', text: data.error ?? `Request failed (${res.status})` });
     setBusy(false);
     onSessionActivity();
   }
