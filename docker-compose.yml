@@ -40,6 +40,7 @@ services:
     environment:
       HARBOR_UPDATER_TOKEN: ${HARBOR_UPDATER_TOKEN:-}
       HARBOR_DEPLOY_DIR: /deploy
+      COMPOSE_PROJECT_NAME: ${COMPOSE_PROJECT_NAME:-harbor}
     volumes:
       - ./:/deploy
       - /var/run/docker.sock:/var/run/docker.sock

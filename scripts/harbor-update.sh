@@ -5,6 +5,7 @@ target=""
 yes=false
 backup=true
 backup_path=""
+export COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-harbor}"
 
 usage() {
   cat <<'USAGE'

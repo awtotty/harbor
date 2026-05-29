@@ -4,6 +4,7 @@ set -euo pipefail
 backup=""
 yes=false
 start_after=true
+export COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-harbor}"
 
 usage() {
   cat <<'USAGE'

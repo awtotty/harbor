@@ -33,7 +33,7 @@ scripts/harbor-import.sh backups/harbor.tgz --yes
 scripts/harbor-update.sh --target v0.1.0
 ```
 
-`harbor-update.sh` fetches Git tags, checks out the requested release tag, rebuilds Harbor with version metadata, stops the old Harbor container to release published ports, starts the updated container, and waits for `/healthz`. By default it creates a pre-update backup first.
+`harbor-update.sh` fetches Git tags, checks out the requested release tag, rebuilds Harbor with version metadata, stops the old Harbor container to release published ports, starts the updated container, and waits for `/healthz`. By default it creates a pre-update backup first. The scripts default `COMPOSE_PROJECT_NAME=harbor` so the updater sidecar uses the same Compose project name from its `/deploy` mount as the host checkout does from the `harbor` directory.
 
 For dogfooding against `main`, you can still use the manual flow:
 

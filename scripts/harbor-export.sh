@@ -3,6 +3,7 @@ set -euo pipefail
 
 output="backups/harbor-backup-$(date -u +%Y%m%d-%H%M%S).tgz"
 live=false
+export COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-harbor}"
 
 usage() {
   cat <<'USAGE'
