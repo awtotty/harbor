@@ -178,10 +178,13 @@ nav button { justify-content: flex-start; text-align: left; text-transform: capi
 .empty h3 { color: var(--text); margin-bottom: 8px; font-size: 24px; }
 .suggestions { display: grid; gap: 8px; margin-top: 22px; }
 .suggestions button { justify-content: flex-start; text-align: left; background: var(--panel-2); }
-.bubble { display: grid; grid-template-columns: 42px minmax(0, 1fr); gap: 12px; max-width: 860px; }
-.bubble.user { align-self: flex-end; grid-template-columns: minmax(0, 1fr) 42px; }
-.bubble.user .avatar { grid-column: 2; grid-row: 1; background: var(--accent-2); }
-.bubble.user .bubbleText { grid-column: 1; grid-row: 1; background: color-mix(in srgb, var(--accent) 12%, var(--panel)); border-color: color-mix(in srgb, var(--accent) 42%, var(--border)); }
+.bubble { display: grid; grid-template-columns: 42px minmax(0, 1fr) auto; gap: 12px; max-width: 860px; align-items: end; }
+.bubble.user { align-self: flex-end; grid-template-columns: auto minmax(0, 1fr) 42px; }
+.bubble.user .avatar { grid-column: 3; grid-row: 1; background: var(--accent-2); }
+.bubble.user .bubbleText { grid-column: 2; grid-row: 1; background: color-mix(in srgb, var(--accent) 12%, var(--panel)); border-color: color-mix(in srgb, var(--accent) 42%, var(--border)); }
+.bubble.user .messageTime { grid-column: 1; grid-row: 1; }
+.bubble.assistant .messageTime { grid-column: 3; grid-row: 1; }
+.messageTime { color: color-mix(in srgb, var(--muted) 62%, transparent); font-size: 11px; white-space: nowrap; padding-bottom: 7px; }
 .avatar { width: 42px; height: 42px; display: grid; place-items: center; border-radius: var(--radius-sm); background: var(--accent-2); color: white; font-size: 12px; font-weight: 800; }
 .bubbleText { white-space: pre-wrap; line-height: 1.58; background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; box-shadow: var(--shadow); }
 .event, .toolCard { align-self: center; width: min(760px, 100%); color: var(--muted); background: color-mix(in srgb, var(--panel) 86%, transparent); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 9px 12px; }

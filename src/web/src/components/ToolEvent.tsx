@@ -1,9 +1,10 @@
+import { formatClockTime } from '../lib/time';
 import type { ChatMessage } from '../types';
 
 export function MessageBubble({ message }: { message: ChatMessage }) {
   if (message.role === 'event' && message.kind === 'tool') return <ToolEvent text={message.text} />;
   if (message.role === 'event') return <details className={`event ${message.kind}`}><summary>{message.kind === 'status' ? 'Status' : message.kind === 'error' ? 'Error' : 'Event'}</summary><pre>{message.text}</pre></details>;
-  return <article className={`bubble ${message.role}`}><div className="avatar">{message.role === 'user' ? 'You' : 'Pi'}</div><div className="bubbleText">{message.text}</div></article>;
+  return <article className={`bubble ${message.role}`}><div className="avatar">{message.role === 'user' ? 'You' : 'Pi'}</div><div className="bubbleText">{message.text}</div><time className="messageTime">{formatClockTime(message.createdAt)}</time></article>;
 }
 
 function ToolEvent({ text }: { text: string }) {

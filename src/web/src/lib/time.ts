@@ -1,3 +1,10 @@
+export function formatClockTime(value?: string): string {
+  if (!value) return '';
+  const timestamp = Date.parse(value);
+  if (Number.isNaN(timestamp)) return '';
+  return new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' }).format(new Date(timestamp));
+}
+
 export function formatRelativeTime(value: string): string {
   const timestamp = Date.parse(value);
   if (Number.isNaN(timestamp)) return '';

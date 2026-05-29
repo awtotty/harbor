@@ -6,7 +6,8 @@ import { MessageBubble } from './components/ToolEvent';
 import { promptSuggestions, themes } from './constants';
 import { readEvents } from './lib/sse';
 import { newId } from './lib/id';
-import { formatRelativeTime } from './lib/time';
+import { formatClockTime, formatRelativeTime } from './lib/time';
+import { useSessions } from './lib/useSessions';
 import type { ChatMessage, EnvEntry, HarborEventLog, HarborSession, ModelOption, PiPackage, Provider, SelectedModel, SystemStatus, Tab, TelegramConfig, TerminalInfo, Theme } from './types';
 import './styles.css';
 
@@ -29,11 +30,11 @@ function App() {
   const [password, setPassword] = useState('');
   const [tab, setTabState] = useState<Tab>(() => tabFromPath(window.location.pathname));
   const [theme, setTheme] = useState<Theme>((localStorage.getItem('harborTheme') as Theme | null) ?? 'harbor');
-  const [sessions, setSessions] = useState<HarborSession[]>([]);
   const [terminals, setTerminals] = useState<TerminalInfo[]>([]);
   const [activeTerminalId, setActiveTerminalId] = useState<string>();
   const [activeSessionId, setActiveSessionId] = useState(localStorage.getItem('harborActiveSessionId') ?? '');
-  useEffect(() => { if (token) { void loadSessions(); void loadTerminals(); } }, [token]);
+  const { sessions, setSessions, activeSessionUpdatedAt, loadSessions } = useSessions(token, activeSessionId, setActiveSessionId);
+  useEffect(() => { if (token) { void loadTerminals(); } }, [token]);
   useEffect(() => { localStorage.setItem('harborActiveSessionId', activeSessionId); }, [activeSessionId]);
   useEffect(() => { localStorage.setItem('harborTheme', theme); }, [theme]);
   useEffect(() => {
@@ -46,15 +47,6 @@ function App() {
     setTabState(nextTab);
     const nextPath = pathForTab(nextTab);
     if (window.location.pathname !== nextPath) window.history.pushState({}, '', nextPath);
-  }
-
-  async function loadSessions() {
-    const res = await fetch('/api/sessions', { headers: { Authorization: `Bearer ${token}` } });
-    if (!res.ok) return handleAuthFailure(res);
-    const data = await res.json();
-    const nextSessions = Array.isArray(data.sessions) ? data.sessions : [];
-    setSessions(nextSessions);
-    if (!nextSessions.some((s: HarborSession) => s.id === activeSessionId)) setActiveSessionId(nextSessions[0]?.id ?? '');
   }
 
   async function loadTerminals() {
@@ -119,7 +111,7 @@ function App() {
 
   if (!token) return <main className={`login theme-${theme}`}><div className="brand"><span>H</span><h1>Harbor</h1></div><form onSubmit={login}><input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} /><button>Enter</button></form><p>Default password: harbor</p></main>;
 
-  return <main className={`shell theme-${theme}`}><aside><div className="brand"><span>H</span><div><h1>Harbor</h1></div></div><div className="sessionsNav"><div className="sessionsTitle"><strong>Sessions</strong><button title="New session" onClick={newSession}>+</button></div>{sessions.map((session) => <button key={session.id} className={activeSessionId === session.id && tab === 'chat' ? 'active sessionButton' : 'sessionButton'} onClick={() => { setActiveSessionId(session.id); setTab('chat'); }}><span>{session.name}</span><small><span className="sessionTime">{formatRelativeTime(session.updatedAt)}</span><SessionTags session={session} /></small></button>)}<div className="sessionsTitle terminalsTitle"><strong>Terminals</strong><button title="New terminal" onClick={newTerminal}>+</button></div>{terminals.map((terminal) => <button key={terminal.id} className={activeTerminalId === terminal.id && tab === 'terminal' ? 'active sessionButton terminalButton' : 'sessionButton terminalButton'} onClick={() => { setActiveTerminalId(terminal.id); setTab('terminal'); }}><span>{terminal.name}</span><small>{terminal.alive ? 'open' : 'closed'}</small></button>)}</div><nav><ThemeSelector theme={theme} setTheme={setTheme} />{(['config', 'system'] as Tab[]).map((name) => <button className={tab === name ? 'active' : ''} onClick={() => setTab(name)} key={name}>{name}</button>)}</nav></aside><div className="content">{tab === 'chat' && (activeSessionId ? <Chat token={token} sessionId={activeSessionId} sessions={sessions} onSessionActivity={loadSessions} onArchiveSession={archiveActiveSession} canArchive={sessions.length > 0} /> : <NoSessions onNewSession={newSession} />)}{tab === 'terminal' && <Terminal token={token} terminalId={activeTerminalId} onClose={closeActiveTerminal} />}{tab === 'config' && <Config token={token} />}{tab === 'system' && <System token={token} />}</div></main>;
+  return <main className={`shell theme-${theme}`}><aside><div className="brand"><span>H</span><div><h1>Harbor</h1></div></div><div className="sessionsNav"><div className="sessionsTitle"><strong>Sessions</strong><button title="New session" onClick={newSession}>+</button></div>{sessions.map((session) => <button key={session.id} className={activeSessionId === session.id && tab === 'chat' ? 'active sessionButton' : 'sessionButton'} onClick={() => { setActiveSessionId(session.id); setTab('chat'); }}><span>{session.name}</span><small><span className="sessionTime">{formatRelativeTime(session.updatedAt)}</span><SessionTags session={session} /></small></button>)}<div className="sessionsTitle terminalsTitle"><strong>Terminals</strong><button title="New terminal" onClick={newTerminal}>+</button></div>{terminals.map((terminal) => <button key={terminal.id} className={activeTerminalId === terminal.id && tab === 'terminal' ? 'active sessionButton terminalButton' : 'sessionButton terminalButton'} onClick={() => { setActiveTerminalId(terminal.id); setTab('terminal'); }}><span>{terminal.name}</span><small>{terminal.alive ? 'open' : 'closed'}</small></button>)}</div><nav><ThemeSelector theme={theme} setTheme={setTheme} />{(['config', 'system'] as Tab[]).map((name) => <button className={tab === name ? 'active' : ''} onClick={() => setTab(name)} key={name}>{name}</button>)}</nav></aside><div className="content">{tab === 'chat' && (activeSessionId ? <Chat token={token} sessionId={activeSessionId} activeSessionUpdatedAt={activeSessionUpdatedAt} sessions={sessions} onSessionActivity={loadSessions} onArchiveSession={archiveActiveSession} canArchive={sessions.length > 0} /> : <NoSessions onNewSession={newSession} />)}{tab === 'terminal' && <Terminal token={token} terminalId={activeTerminalId} onClose={closeActiveTerminal} />}{tab === 'config' && <Config token={token} />}{tab === 'system' && <System token={token} />}</div></main>;
 }
 
 function NoSessions({ onNewSession }: { onNewSession: () => void | Promise<void> }) {
@@ -136,13 +128,13 @@ function SessionTags({ session }: { session: HarborSession }) {
   return <span className="sessionTags">{channels.map((channel) => <span className="sessionTag" key={channel}>{channel}</span>)}</span>;
 }
 
-function Chat({ token, sessionId, sessions, onSessionActivity, onArchiveSession, canArchive }: { token: string; sessionId: string; sessions: HarborSession[]; onSessionActivity: () => void | Promise<void>; onArchiveSession: () => void | Promise<void>; canArchive: boolean }) {
+function Chat({ token, sessionId, activeSessionUpdatedAt, sessions, onSessionActivity, onArchiveSession, canArchive }: { token: string; sessionId: string; activeSessionUpdatedAt?: string; sessions: HarborSession[]; onSessionActivity: () => void | Promise<unknown>; onArchiveSession: () => void | Promise<void>; canArchive: boolean }) {
   const [draft, setDraft] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [busy, setBusy] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   useEffect(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), [messages]);
-  useEffect(() => { void loadMessages(); }, [token, sessionId]);
+  useEffect(() => { void loadMessages(); }, [token, sessionId, activeSessionUpdatedAt]);
 
   async function loadMessages() {
     const res = await fetch(`/api/sessions/${sessionId}/messages`, { headers: { Authorization: `Bearer ${token}` } });
@@ -152,7 +144,7 @@ function Chat({ token, sessionId, sessions, onSessionActivity, onArchiveSession,
     }
     const data = await res.json();
     const nextMessages = Array.isArray(data.messages) ? data.messages : [];
-    setMessages(nextMessages.map((m: any) => ({ id: m.id, role: m.role, kind: m.kind, text: m.text })));
+    setMessages(nextMessages.map((m: any) => ({ id: m.id, role: m.role, kind: m.kind, text: m.text, createdAt: m.createdAt })));
   }
 
   function addMessage(message: ChatMessage) { setMessages((old) => [...old, message]); }
@@ -160,7 +152,7 @@ function Chat({ token, sessionId, sessions, onSessionActivity, onArchiveSession,
     setMessages((old) => {
       const last = old.at(-1);
       if (last?.role === 'assistant') return [...old.slice(0, -1), { ...last, text: last.text + text }];
-      return [...old, { id: newId(), role: 'assistant', text }];
+      return [...old, { id: newId(), role: 'assistant', text, createdAt: new Date().toISOString() }];
     });
   }
 
@@ -170,14 +162,14 @@ function Chat({ token, sessionId, sessions, onSessionActivity, onArchiveSession,
     if (!message || busy) return;
     setDraft('');
     setBusy(true);
-    addMessage({ id: newId(), role: 'user', text: message });
+    addMessage({ id: newId(), role: 'user', text: message, createdAt: new Date().toISOString() });
     const res = await fetch('/api/chat-json', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ message, sessionId }) });
     const data = await res.json();
     for (const event of data.events ?? []) {
       if (event.type === 'assistant_delta' || event.type === 'assistant_message') appendAssistant(event.text);
-      if (event.type === 'tool_event') addMessage({ id: newId(), role: 'event', kind: 'tool', text: event.text.trim() });
-      if (event.type === 'status') addMessage({ id: newId(), role: 'event', kind: 'status', text: event.text });
-      if (event.type === 'error') addMessage({ id: newId(), role: 'event', kind: 'error', text: event.message });
+      if (event.type === 'tool_event') addMessage({ id: newId(), role: 'event', kind: 'tool', text: event.text.trim(), createdAt: new Date().toISOString() });
+      if (event.type === 'status') addMessage({ id: newId(), role: 'event', kind: 'status', text: event.text, createdAt: new Date().toISOString() });
+      if (event.type === 'error') addMessage({ id: newId(), role: 'event', kind: 'error', text: event.message, createdAt: new Date().toISOString() });
     }
     if (data.sessionId && data.sessionId !== sessionId) {
       await onSessionActivity();

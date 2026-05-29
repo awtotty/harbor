@@ -135,7 +135,7 @@ export function listSessions(options: { archived?: boolean } = {}): StoredSessio
     select id, name, pi_session_id as piSessionId, workspace_id as workspaceId, created_at as createdAt, updated_at as updatedAt, archived_at as archivedAt
     from sessions
     where ${archived ? 'archived_at is not null' : 'archived_at is null'}
-    order by updated_at desc
+    order by created_at desc
   `).all() as unknown as StoredSession[];
   const linked = db.prepare('select channel, identity from channel_state where active_session_id = ?');
   return sessions.map((session) => ({ ...session, linkedChannels: linked.all(session.id) as Array<{ channel: ChannelName; identity: string }> }));
@@ -170,7 +170,7 @@ export function ensureSession(id: string, workspaceId = 'default'): void {
   db.prepare(`
     insert into sessions (id, name, pi_session_id, workspace_id, created_at, updated_at)
     values (?, ?, ?, ?, ?, ?)
-    on conflict(id) do update set updated_at = excluded.updated_at
+    on conflict(id) do nothing
   `).run(id, defaultSessionName(id), id, workspaceId, now, now);
 }
 
