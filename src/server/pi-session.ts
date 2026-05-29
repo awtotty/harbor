@@ -1,3 +1,5 @@
+import { existsSync, readdirSync, statSync } from 'node:fs';
+import { join } from 'node:path';
 import {
   createAgentSession,
   SessionManager as PiSessionManager,
@@ -66,7 +68,7 @@ export class PiSessionRegistry {
     const { session } = await createAgentSession({
       agentDir: piAgentDir,
       cwd: workspaceDir,
-      sessionManager: PiSessionManager.create(workspaceDir, `${configDir}/sessions`, { id: sessionId }),
+      sessionManager: openOrCreatePiSessionManager(sessionId),
       authStorage,
       modelRegistry,
       model: selected,
@@ -82,6 +84,22 @@ export class PiSessionRegistry {
 
     return { session, busy: false, sinks };
   }
+}
+
+function openOrCreatePiSessionManager(sessionId: string): PiSessionManager {
+  const sessionDir = `${configDir}/sessions`;
+  const existingSessionFile = findPiSessionFile(sessionDir, sessionId);
+  if (existingSessionFile) return PiSessionManager.open(existingSessionFile, sessionDir, workspaceDir);
+  return PiSessionManager.create(workspaceDir, sessionDir, { id: sessionId });
+}
+
+function findPiSessionFile(sessionDir: string, sessionId: string): string | undefined {
+  if (!existsSync(sessionDir)) return undefined;
+  const suffix = `_${sessionId}.jsonl`;
+  return readdirSync(sessionDir)
+    .filter((entry) => entry.endsWith(suffix))
+    .map((entry) => join(sessionDir, entry))
+    .sort((a, b) => statSync(b).mtimeMs - statSync(a).mtimeMs)[0];
 }
 
 async function applyConfigEnv(): Promise<void> {
