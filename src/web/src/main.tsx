@@ -95,10 +95,19 @@ function App() {
     setTab('chat');
   }
 
-  function handleAuthFailure(res: Response) {
-    if (res.status !== 401) return;
+  function clearAuth() {
     localStorage.removeItem('harborToken');
     setToken('');
+  }
+
+  function handleAuthFailure(res: Response) {
+    if (res.status !== 401) return;
+    clearAuth();
+  }
+
+  async function logout() {
+    await fetch('/api/logout', { method: 'POST', headers: { Authorization: `Bearer ${token}` } }).catch(() => undefined);
+    clearAuth();
   }
 
   async function login(event: React.FormEvent) {
@@ -108,11 +117,12 @@ function App() {
     const data = await res.json();
     localStorage.setItem('harborToken', data.token);
     setToken(data.token);
+    setPassword('');
   }
 
   if (!token) return <main className={`login theme-${theme}`}><div className="brand"><span>H</span><h1>Harbor</h1></div><form onSubmit={login}><input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} /><button>Enter</button></form><p>Default password: harbor</p></main>;
 
-  return <main className={`shell theme-${theme}`}><aside><div className="brand"><span>H</span><div><h1>Harbor</h1></div></div><div className="sessionsNav"><div className="sessionsTitle"><strong>Sessions</strong><button title="New session" onClick={newSession}>+</button></div>{sessions.map((session) => <button key={session.id} className={activeSessionId === session.id && tab === 'chat' ? 'active sessionButton' : 'sessionButton'} onClick={() => { setActiveSessionId(session.id); setTab('chat'); }}><span>{session.name}</span><small><span className="sessionTime">{formatRelativeTime(session.updatedAt)}</span><SessionTags session={session} /></small></button>)}<div className="sessionsTitle terminalsTitle"><strong>Terminals</strong><button title="New terminal" onClick={newTerminal}>+</button></div>{terminals.map((terminal) => <button key={terminal.id} className={activeTerminalId === terminal.id && tab === 'terminal' ? 'active sessionButton terminalButton' : 'sessionButton terminalButton'} onClick={() => { setActiveTerminalId(terminal.id); setTab('terminal'); }}><span>{terminal.name}</span><small>{terminal.alive ? 'open' : 'closed'}</small></button>)}</div><nav><ThemeSelector theme={theme} setTheme={setTheme} />{(['config', 'system'] as Tab[]).map((name) => <button className={tab === name ? 'active' : ''} onClick={() => setTab(name)} key={name}>{name}</button>)}</nav></aside><div className="content">{tab === 'chat' && (activeSessionId ? <Chat token={token} sessionId={activeSessionId} activeSessionUpdatedAt={activeSessionUpdatedAt} sessions={sessions} onSessionActivity={loadSessions} onSwitchSession={(nextSessionId) => { setActiveSessionId(nextSessionId); setTab('chat'); }} onArchiveSession={archiveActiveSession} canArchive={sessions.length > 0} /> : <NoSessions onNewSession={newSession} />)}{tab === 'terminal' && <Suspense fallback={<section className="terminalScreen noSessionsScreen"><div className="empty"><h3>Loading terminal…</h3></div></section>}><Terminal token={token} terminalId={activeTerminalId} onClose={closeActiveTerminal} onNewTerminal={newTerminal} /></Suspense>}{tab === 'config' && <Config token={token} />}{tab === 'system' && <System token={token} />}</div></main>;
+  return <main className={`shell theme-${theme}`}><aside><div className="brand"><span>H</span><div><h1>Harbor</h1></div></div><div className="sessionsNav"><div className="sessionsTitle"><strong>Sessions</strong><button title="New session" onClick={newSession}>+</button></div>{sessions.map((session) => <button key={session.id} className={activeSessionId === session.id && tab === 'chat' ? 'active sessionButton' : 'sessionButton'} onClick={() => { setActiveSessionId(session.id); setTab('chat'); }}><span>{session.name}</span><small><span className="sessionTime">{formatRelativeTime(session.updatedAt)}</span><SessionTags session={session} /></small></button>)}<div className="sessionsTitle terminalsTitle"><strong>Terminals</strong><button title="New terminal" onClick={newTerminal}>+</button></div>{terminals.map((terminal) => <button key={terminal.id} className={activeTerminalId === terminal.id && tab === 'terminal' ? 'active sessionButton terminalButton' : 'sessionButton terminalButton'} onClick={() => { setActiveTerminalId(terminal.id); setTab('terminal'); }}><span>{terminal.name}</span><small>{terminal.alive ? 'open' : 'closed'}</small></button>)}</div><nav><ThemeSelector theme={theme} setTheme={setTheme} />{(['config', 'system'] as Tab[]).map((name) => <button className={tab === name ? 'active' : ''} onClick={() => setTab(name)} key={name}>{name}</button>)}<button onClick={logout}>logout</button></nav></aside><div className="content">{tab === 'chat' && (activeSessionId ? <Chat token={token} sessionId={activeSessionId} activeSessionUpdatedAt={activeSessionUpdatedAt} sessions={sessions} onSessionActivity={loadSessions} onSwitchSession={(nextSessionId) => { setActiveSessionId(nextSessionId); setTab('chat'); }} onArchiveSession={archiveActiveSession} canArchive={sessions.length > 0} /> : <NoSessions onNewSession={newSession} />)}{tab === 'terminal' && <Suspense fallback={<section className="terminalScreen noSessionsScreen"><div className="empty"><h3>Loading terminal…</h3></div></section>}><Terminal token={token} terminalId={activeTerminalId} onClose={closeActiveTerminal} onNewTerminal={newTerminal} /></Suspense>}{tab === 'config' && <Config token={token} />}{tab === 'system' && <System token={token} />}</div></main>;
 }
 
 function NoSessions({ onNewSession }: { onNewSession: () => void | Promise<void> }) {
