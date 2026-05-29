@@ -1,42 +1,60 @@
-# DigitalOcean + Tailscale Deployment
+# VPS / Home Server + Tailscale Deployment
 
-This guide deploys Harbor as an always-on personal agent appliance on a DigitalOcean Droplet, reachable privately over Tailscale.
+This guide deploys Harbor as an always-on personal agent appliance on any host with Docker, reachable privately over Tailscale. Linux is the simplest target, but the host can also be macOS or Windows if Docker Desktop is installed.
 
-## 1. Create a Droplet
+Good host options include:
+
+- A VPS from Hetzner, DigitalOcean, Vultr, Linode/Akamai, OVH, Netcup, etc.
+- A home server, old desktop, mini PC, or NAS.
+
+Tailscale is the private network layer; it is not the host. The host runs Docker and Harbor. Tailscale lets your devices reach Harbor without exposing the web UI to the public internet.
+
+Most commands below assume Ubuntu/Debian. On macOS or Windows, install Docker Desktop and Tailscale using their native installers, then run the Harbor `docker compose` commands from a terminal.
+
+## 1. Choose a host
 
 Recommended starting point:
 
-- Ubuntu 24.04 LTS
+- Ubuntu 24.04 LTS or Debian 12 for easiest setup, or another OS with Docker support
 - 2 vCPU / 4 GB RAM or larger
 - 50 GB disk or larger if you keep repositories/files in Harbor
-- SSH key authentication
+- SSH key authentication if using a VPS
+
+For a home machine, Ubuntu Server or Debian is simplest, but any always-on machine with Docker is acceptable.
 
 ## 2. Install Docker and Git
 
-SSH into the Droplet:
+SSH into the host:
 
 ```bash
-ssh root@YOUR_DROPLET_IP
+ssh YOUR_USER@YOUR_HOST
 ```
 
-Install dependencies:
+Install dependencies on Ubuntu/Debian:
 
 ```bash
-apt update
-apt install -y docker.io docker-compose-plugin git curl
-systemctl enable --now docker
+sudo apt update
+sudo apt install -y docker.io docker-compose-plugin git curl
+sudo systemctl enable --now docker
+```
+
+If your user is not in the `docker` group, either use `sudo docker ...` or add your user:
+
+```bash
+sudo usermod -aG docker "$USER"
+newgrp docker
 ```
 
 ## 3. Install and join Tailscale
 
 ```bash
 curl -fsSL https://tailscale.com/install.sh | sh
-tailscale up
+sudo tailscale up
 ```
 
-Open the printed auth URL and approve the server in your Tailscale account.
+Open the printed auth URL and approve the host in your Tailscale account.
 
-Get the server's Tailscale IP:
+Get the host's Tailscale IP:
 
 ```bash
 tailscale ip -4
@@ -45,7 +63,7 @@ tailscale ip -4
 If MagicDNS is enabled in Tailscale, you can also use the machine name, e.g.:
 
 ```text
-http://harbor-droplet:8080
+http://harbor-host:8080
 ```
 
 ## 4. Clone Harbor
@@ -62,7 +80,7 @@ Edit `.env`:
 vim .env
 ```
 
-Recommended VPS settings:
+Recommended always-on settings:
 
 ```env
 HARBOR_PASSWORD=use-a-long-random-password
@@ -78,6 +96,8 @@ HARBOR_SSH_PORT=2222
 ```
 
 Do not leave `HARBOR_PASSWORD=harbor` with `HARBOR_PRODUCTION=true`; Harbor will refuse to start.
+
+For local-only testing on the host, keep the bind hosts as `127.0.0.1`.
 
 ## 5. Start Harbor
 
@@ -101,7 +121,7 @@ http://100.x.y.z:8080
 or with MagicDNS:
 
 ```text
-http://harbor-droplet:8080
+http://harbor-host:8080
 ```
 
 ## 6. Operations
@@ -135,10 +155,16 @@ docker compose exec harbor bash
 
 ### Check health
 
-From inside the Droplet:
+From inside the host:
 
 ```bash
 curl -fsS http://localhost:8080/healthz
+```
+
+or, if bound to the Tailscale IP:
+
+```bash
+curl -fsS http://100.x.y.z:8080/healthz
 ```
 
 ## 7. Backups
@@ -163,15 +189,17 @@ done
 
 ## 8. Firewall notes
 
-DigitalOcean Cloud Firewall and `ufw` should not expose Harbor's web port to the public internet.
+Do not expose Harbor's web port to the public internet unless you have put it behind a trusted access layer.
 
-Recommended public inbound:
+Recommended public inbound on a VPS:
 
-- SSH to the Droplet on port 22 from your IP, or use Tailscale SSH.
+- SSH to the host on port 22 from your IP, or use Tailscale SSH.
 
 Recommended private inbound over Tailscale:
 
 - Harbor web: `8080`
 - Harbor container SSH: `2222` if you use it
 
-If you bind Harbor to the Tailscale IP as shown above, the web UI is not listening on the public Droplet interface.
+If you bind Harbor to the Tailscale IP as shown above, the web UI is not listening on the public interface.
+
+On a home server, router port forwarding is not required when using Tailscale.
