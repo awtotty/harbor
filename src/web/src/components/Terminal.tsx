@@ -1,15 +1,25 @@
 import { useEffect, useRef } from 'react';
 import { Terminal as XTerm } from '@xterm/xterm';
+import { FitAddon } from '@xterm/addon-fit';
 
-export function Terminal({ token, terminalId, onClose }: { token: string; terminalId?: string; onClose: () => void | Promise<void> }) {
+export function Terminal({ token, terminalId, onClose, onNewTerminal }: { token: string; terminalId?: string; onClose: () => void | Promise<void>; onNewTerminal?: () => void | Promise<void> }) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!terminalId || !containerRef.current) return;
     const term = new XTerm({ cursorBlink: true, convertEol: false, fontFamily: 'Menlo, Monaco, "Cascadia Code", monospace', fontSize: 13, theme: { background: '#050a12', foreground: '#e5e7eb', cursor: '#38bdf8' } });
+    const fitAddon = new FitAddon();
+    term.loadAddon(fitAddon);
     term.open(containerRef.current);
+    fitAddon.fit();
     term.focus();
-    void fetch(`/api/terminals/${terminalId}/resize`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ cols: term.cols, rows: term.rows }) });
+    const resize = () => {
+      fitAddon.fit();
+      void fetch(`/api/terminals/${terminalId}/resize`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ cols: term.cols, rows: term.rows }) });
+    };
+    resize();
+    const observer = new ResizeObserver(resize);
+    observer.observe(containerRef.current);
     const replaying = { current: false };
     const dataDisposable = term.onData((input) => {
       if (replaying.current) return;
@@ -42,9 +52,9 @@ export function Terminal({ token, terminalId, onClose }: { token: string; termin
         }
       }
     }).catch(() => undefined);
-    return () => { controller.abort(); dataDisposable.dispose(); term.dispose(); };
+    return () => { controller.abort(); observer.disconnect(); dataDisposable.dispose(); term.dispose(); };
   }, [terminalId, token]);
 
-  if (!terminalId) return <section className="terminalScreen"><div className="empty"><h3>No terminal open</h3><p>Create a terminal from the left sidebar.</p></div></section>;
-  return <section className="terminalScreen"><div className="chatHeader"><div><h2>Terminal</h2><p><code>{terminalId}</code> · <code>/workspace</code></p></div><div className="chatActions"><button className="ghost" onClick={onClose}>Close</button></div></div><div className="terminalFrame" ref={containerRef} /></section>;
+  if (!terminalId) return <section className="terminalScreen noSessionsScreen"><div className="empty"><h3>No terminal open</h3><p>Create a terminal to get shell access inside Harbor.</p>{onNewTerminal && <button onClick={onNewTerminal}>New terminal</button>}</div></section>;
+  return <section className="terminalScreen"><div className="chatHeader"><div><h2>Terminal</h2></div><div className="chatActions"><button className="ghost" onClick={onClose}>Close</button></div></div><div className="terminalFrame" ref={containerRef} /></section>;
 }

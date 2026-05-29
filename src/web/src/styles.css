@@ -165,6 +165,7 @@ nav button { justify-content: flex-start; text-align: left; text-transform: capi
 .login form { display: grid; gap: 12px; }
 .chatScreen { flex: 1; min-height: 0; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; gap: 16px; width: 100%; max-width: 1160px; margin: 0 auto; }
 .noSessionsScreen { display: flex; align-items: center; justify-content: center; }
+.terminalScreen.noSessionsScreen { display: flex; }
 .chatHeader, .screenHeader { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
 .chatHeader p, .screenHeader p { margin-top: 7px; }
 .chatActions { display: flex; align-items: center; gap: 10px; }
@@ -203,7 +204,7 @@ nav button { justify-content: flex-start; text-align: left; text-transform: capi
 .composer textarea:focus { box-shadow: none; }
 .composerFooter { display: flex; align-items: center; justify-content: space-between; gap: 12px; color: var(--muted); font-size: 12px; border-top: 1px solid var(--border); padding-top: 10px; }
 .composerFooter button { min-width: 82px; }
-.terminalScreen { height: calc(100vh - 56px); display: grid; grid-template-rows: auto 1fr; gap: 16px; max-width: 1160px; margin: 0 auto; }
+.terminalScreen { flex: 1; min-height: 0; display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 16px; width: 100%; max-width: 1160px; margin: 0 auto; }
 .terminalFrame { min-height: 0; overflow: hidden; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius); background: #050a12; box-shadow: var(--shadow); }
 .terminalFrame .xterm { height: 100%; }
 .settingsScreen { max-width: 980px; margin: 0 auto; display: grid; gap: 18px; }
