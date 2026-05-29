@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { Terminal as XTerm } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
+import '@xterm/xterm/css/xterm.css';
 
 export function Terminal({ token, terminalId, onClose, onNewTerminal }: { token: string; terminalId?: string; onClose: () => void | Promise<void>; onNewTerminal?: () => void | Promise<void> }) {
   const containerRef = useRef<HTMLDivElement>(null);
