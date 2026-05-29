@@ -201,9 +201,11 @@ nav button { justify-content: flex-start; text-align: left; text-transform: capi
 .toolBadge { color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--border)); border-radius: 999px; padding: 3px 8px; font-size: 11px; }
 .toolFields { display: grid; gap: 10px; margin-top: 12px; }
 .toolFields strong { display: block; margin-bottom: 4px; color: var(--text); font-size: 12px; }
-.rawEventText { border: 0; padding: 8px 0 0; margin: 10px 0 0; background: transparent; color: var(--muted); font-size: 12px; }
+.rawEvent { color: var(--muted); }
+.rawEvent > summary { font-size: 12px; cursor: pointer; }
+.rawEventText { border: 0; padding: 8px 0 0; margin: 10px 0 0; background: transparent; color: var(--muted); font-size: 12px; white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; }
 .event pre { border: 0; padding: 8px 0 0; margin: 0; background: transparent; font-size: 12px; }
-.toolFields pre { margin: 0; font-size: 12px; max-height: 280px; }
+.toolFields pre { margin: 0; font-size: 12px; max-height: 280px; white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; }
 .composer { display: grid; gap: 10px; padding: 14px; border: 1px solid var(--border); border-radius: var(--radius); background: color-mix(in srgb, var(--panel) 92%, transparent); box-shadow: var(--shadow); }
 .composer textarea { min-height: 78px; max-height: 190px; resize: vertical; border: 0; background: transparent; padding: 6px; }
 .composer textarea:focus { box-shadow: none; }
