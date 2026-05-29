@@ -56,5 +56,5 @@ export function Terminal({ token, terminalId, onClose, onNewTerminal }: { token:
   }, [terminalId, token]);
 
   if (!terminalId) return <section className="terminalScreen noSessionsScreen"><div className="empty"><h3>No terminal open</h3><p>Create a terminal to get shell access inside Harbor.</p>{onNewTerminal && <button onClick={onNewTerminal}>New terminal</button>}</div></section>;
-  return <section className="terminalScreen"><div className="chatHeader"><div><h2>Terminal</h2></div><div className="chatActions"><button className="ghost" onClick={onClose}>Close</button></div></div><div className="terminalFrame" ref={containerRef} /></section>;
+  return <section className="terminalScreen"><div className="chatHeader"><div><h2>Terminal</h2></div><div className="chatActions"><button className="ghost" onClick={onClose}>Close</button></div></div><div className="terminalFrame"><div className="terminalMount" ref={containerRef} /></div></section>;
 }

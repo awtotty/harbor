@@ -163,7 +163,7 @@ nav button { justify-content: flex-start; text-align: left; text-transform: capi
 
 .login { max-width: 390px; margin: 15vh auto; display: grid; gap: 18px; padding: 30px; border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); }
 .login form { display: grid; gap: 12px; }
-.chatScreen { flex: 1; min-height: 0; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; gap: 16px; width: 100%; max-width: 1160px; margin: 0 auto; }
+.chatScreen { flex: 1; min-height: 0; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; gap: 16px; width: 100%; margin: 0 auto; }
 .noSessionsScreen { display: flex; align-items: center; justify-content: center; }
 .terminalScreen.noSessionsScreen { display: flex; }
 .chatHeader, .screenHeader { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
@@ -209,9 +209,12 @@ nav button { justify-content: flex-start; text-align: left; text-transform: capi
 .composer textarea:focus { box-shadow: none; }
 .composerFooter { display: flex; align-items: center; justify-content: space-between; gap: 12px; color: var(--muted); font-size: 12px; border-top: 1px solid var(--border); padding-top: 10px; }
 .composerFooter button { min-width: 82px; }
-.terminalScreen { flex: 1; min-height: 0; display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 16px; width: 100%; max-width: 1160px; margin: 0 auto; }
-.terminalFrame { min-height: 0; overflow: hidden; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius); background: #050a12; box-shadow: var(--shadow); }
-.terminalFrame .xterm { height: 100%; }
+.terminalScreen { flex: 1; min-height: 0; display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 16px; width: 100%; margin: 0 auto; }
+.terminalFrame { min-height: 0; overflow: hidden; padding: 8px; border: 1px solid var(--border); border-radius: var(--radius); background: #050a12; box-shadow: var(--shadow); display: flex; }
+.terminalMount { flex: 1; min-height: 0; min-width: 0; overflow: hidden; background: #050a12; }
+.terminalMount .xterm { height: 100%; padding: 0; }
+.terminalMount .xterm-viewport, .terminalMount .xterm-screen { height: 100%; }
+.terminalMount .xterm-viewport { background: #050a12; }
 .settingsScreen { max-width: 980px; margin: 0 auto; display: grid; gap: 18px; }
 .card { display: grid; gap: 14px; background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; box-shadow: var(--shadow); }
 .cardHeader { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }

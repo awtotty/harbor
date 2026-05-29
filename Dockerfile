@@ -16,6 +16,8 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN corepack enable && pnpm install --frozen-lockfile
 COPY . .
 RUN pnpm run build \
+  && printf '#!/bin/sh\nexec node /app/node_modules/@earendil-works/pi-coding-agent/dist/cli.js "$@"\n' > /usr/local/bin/pi \
+  && chmod +x /usr/local/bin/pi \
   && chown -R agent:agent /app
 
 ENV PATH="/config/bin:/home/agent/.local/bin:/app/node_modules/.bin:${PATH}" \
@@ -27,4 +29,4 @@ ENV PATH="/config/bin:/home/agent/.local/bin:/app/node_modules/.bin:${PATH}" \
     PI_CODING_AGENT_SESSION_DIR=/config/sessions
 
 EXPOSE 8080 22
-CMD service ssh start && mkdir -p /config/bin /home/agent/.local/bin && chown -R agent:agent /workspace /config /home/agent && exec sudo -H -E -u agent HOME=/home/agent node dist/server/index.js
+CMD service ssh start && mkdir -p /config/bin /home/agent/.local/bin && printf '#!/bin/sh\nexec node /app/node_modules/@earendil-works/pi-coding-agent/dist/cli.js "$@"\n' > /usr/local/bin/pi && chmod +x /usr/local/bin/pi && chown -R agent:agent /workspace /config /home/agent && exec sudo -H -E -u agent HOME=/home/agent node dist/server/index.js

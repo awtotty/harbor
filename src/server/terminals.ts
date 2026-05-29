@@ -17,6 +17,7 @@ function terminalUserOptions(): Pick<IPtyForkOptions, 'uid' | 'gid' | 'env'> {
     USER: terminalUser,
     LOGNAME: terminalUser,
     HOME: `/home/${terminalUser}`,
+    PATH: `/config/bin:/home/${terminalUser}/.local/bin:/app/node_modules/.bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin`,
   };
   if (process.platform === 'win32' || process.getuid?.() !== 0) return { env };
   try {
@@ -59,7 +60,6 @@ export function createTerminal(): TerminalInfo {
     terminal.buffer.push(chunk);
     for (const listener of terminal.listeners) listener(chunk);
   });
-  proc.write('cd /workspace\r');
   terminals.set(id, terminal);
   recordEvent({ source: 'terminal', level: 'info', type: 'terminal.created', title: 'Terminal created', metadata: { terminalId: id, user: terminalUser } });
   setSystemStatus({ key: 'terminals', status: 'ok', summary: `${terminals.size} terminal(s) tracked`, metadata: { count: terminals.size } });
