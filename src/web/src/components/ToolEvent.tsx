@@ -12,14 +12,13 @@ export function MessageBubble({ message }: { message: ChatMessage }) {
 
 export function ActivityGroup({ messages }: { messages: ChatMessage[] }) {
   const parsed = messages.map((message) => parseToolEvent(message.text));
-  const toolNames = [...new Set(parsed.map((event) => event.toolName).filter(Boolean))].slice(0, 4);
-  const summary = toolNames.length ? toolNames.join(', ') : `${messages.length} event${messages.length === 1 ? '' : 's'}`;
+  const summary = summarizeActivity(parsed);
   return <details className="activityCard"><summary><span className="toolBadge">Activity</span><span>{summary}</span><small>{messages.length} event{messages.length === 1 ? '' : 's'}</small></summary><div className="activityList">{messages.map((message, index) => <ToolEvent key={message.id} text={message.text} compact defaultOpen={messages.length === 1 && index === 0} />)}</div></details>;
 }
 
 function ToolEvent({ text, compact = false, defaultOpen = false }: { text: string; compact?: boolean; defaultOpen?: boolean }) {
   const parsed = parseToolEvent(text);
-  return <details className={compact ? 'toolCard compact' : 'toolCard'} open={defaultOpen}><summary><span className="toolBadge">{parsed.label}</span><span>{parsed.title}</span></summary>{parsed.fields.length > 0 && <div className="toolFields">{parsed.fields.map((field) => <div key={field.label}><strong>{field.label}</strong><pre>{field.value}</pre></div>)}</div>}<details className="rawEvent"><summary>Raw event</summary><pre>{text}</pre></details></details>;
+  return <details className={compact ? 'toolCard compact' : 'toolCard'} open={defaultOpen}><summary><span className="toolBadge">{parsed.label}</span><span>{parsed.title}</span></summary>{parsed.fields.length > 0 ? <div className="toolFields">{parsed.fields.map((field) => <div key={field.label}><strong>{field.label}</strong><pre>{field.value}</pre></div>)}</div> : <pre className="rawEventText">{text}</pre>}</details>;
 }
 
 function parseToolEvent(text: string): { label: string; title: string; toolName: string; fields: Array<{ label: string; value: string }> } {
@@ -36,6 +35,24 @@ function parseToolEvent(text: string): { label: string; title: string; toolName:
   } catch {
     return { label: eventType, title: eventType, toolName: eventType, fields: [{ label: 'Payload', value: jsonText.trim() }] };
   }
+}
+
+function summarizeActivity(events: Array<{ toolName: string }>): string {
+  const counts = events.reduce((acc, event) => {
+    const name = event.toolName.toLowerCase();
+    if (name.includes('read')) acc.read += 1;
+    else if (name.includes('bash')) acc.bash += 1;
+    else if (name.includes('edit') || name.includes('write')) acc.edit += 1;
+    else acc.other += 1;
+    return acc;
+  }, { read: 0, bash: 0, edit: 0, other: 0 });
+  const parts = [
+    counts.read ? `read ${counts.read} file${counts.read === 1 ? '' : 's'}` : '',
+    counts.bash ? `ran ${counts.bash} command${counts.bash === 1 ? '' : 's'}` : '',
+    counts.edit ? `edited ${counts.edit} file${counts.edit === 1 ? '' : 's'}` : '',
+    counts.other ? `${counts.other} other event${counts.other === 1 ? '' : 's'}` : '',
+  ].filter(Boolean);
+  return parts.length ? parts.join(' · ') : 'agent activity';
 }
 
 function titleForToolEvent(eventType: string, name: string, candidate: any): string {
