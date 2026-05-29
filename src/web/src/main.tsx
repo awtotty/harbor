@@ -7,7 +7,7 @@ import { newId } from './lib/id';
 import { formatClockTime, formatRelativeTime } from './lib/time';
 import { useSessions } from './lib/useSessions';
 import { useChatMessages } from './lib/useChatMessages';
-import type { ChatMessage, EnvEntry, HarborEventLog, HarborSession, ModelOption, PiPackage, Provider, SelectedModel, SystemStatus, Tab, TelegramConfig, TerminalInfo, Theme } from './types';
+import type { CapabilityBundle, ChatMessage, EnvEntry, HarborEventLog, HarborSession, ModelOption, PiPackage, Provider, SelectedModel, SystemStatus, Tab, TelegramConfig, TerminalInfo, Theme } from './types';
 import './styles.css';
 
 const Terminal = lazy(() => import('./components/Terminal').then((module) => ({ default: module.Terminal })));
@@ -291,9 +291,13 @@ function TelegramSettings({ token }: { token: string }) {
 
 function Packages({ token }: { token: string }) {
   const [packages, setPackages] = useState<PiPackage[]>([]);
+  const [bundles, setBundles] = useState<CapabilityBundle[]>([]);
   const [source, setSource] = useState('');
   const [log, setLog] = useState('');
-  const load = () => fetch('/api/packages', { headers: { Authorization: `Bearer ${token}` } }).then((r) => r.ok ? r.json() : { packages: [] }).then((d) => setPackages(Array.isArray(d.packages) ? d.packages : []));
+  const load = () => Promise.all([
+    fetch('/api/packages', { headers: { Authorization: `Bearer ${token}` } }).then((r) => r.ok ? r.json() : { packages: [] }),
+    fetch('/api/bundles', { headers: { Authorization: `Bearer ${token}` } }).then((r) => r.ok ? r.json() : { bundles: [] }),
+  ]).then(([packagesData, bundlesData]) => { setPackages(Array.isArray(packagesData.packages) ? packagesData.packages : []); setBundles(Array.isArray(bundlesData.bundles) ? bundlesData.bundles : []); });
   useEffect(() => { void load(); }, [token]);
   async function run(path: string, body: Record<string, string> = {}) {
     setLog('');
@@ -307,7 +311,20 @@ function Packages({ token }: { token: string }) {
     await load();
   }
   async function install() { if (!source.trim()) return; await run('/api/packages/install', { source: source.trim() }); setSource(''); }
-  return <div className="card"><div className="cardHeader"><div><h3>Packages</h3><p>Install, remove, and update Pi packages loaded by Harbor.</p></div><button onClick={() => run('/api/packages/update')}>Update all</button></div><div className="packageInstall"><input value={source} onChange={(e) => setSource(e.target.value)} placeholder="npm:pi-web-access, git URL, or local path" /><button onClick={install}>Install</button></div>{packages.map((pkg) => <div className="row" key={pkg.source}><div><strong>{pkg.source}</strong><small>{pkg.path}</small></div><div><button onClick={() => run('/api/packages/update', { source: pkg.source })}>Update</button><button className="danger" onClick={() => run('/api/packages/remove', { source: pkg.source })}>Remove</button></div></div>)}{log && <pre>{log}</pre>}</div>;
+  return <div className="card"><div className="cardHeader"><div><h3>Packages & bundles</h3><p>Install Pi packages and optional tool bundles loaded by Harbor.</p></div><button onClick={() => run('/api/packages/update')}>Update all packages</button></div><BundleList bundles={bundles} run={run} /><div className="packageInstall"><input value={source} onChange={(e) => setSource(e.target.value)} placeholder="npm:pi-web-access, git URL, or local path" /><button onClick={install}>Install package</button></div>{packages.map((pkg) => <PackageRow key={pkg.source} pkg={pkg} run={run} />)}{log && <pre>{log}</pre>}</div>;
+}
+
+function BundleList({ bundles, run }: { bundles: CapabilityBundle[]; run: (path: string, body?: Record<string, string>) => Promise<void> }) {
+  if (bundles.length === 0) return null;
+  return <div className="setupSteps">{bundles.map((bundle) => <BundleCard key={bundle.id} bundle={bundle} run={run} />)}</div>;
+}
+
+function BundleCard({ bundle, run }: { bundle: CapabilityBundle; run: (path: string, body?: Record<string, string>) => Promise<void> }) {
+  return <div><span className={bundle.installed ? 'step done' : 'step'}>{bundle.installed ? '✓' : '+'}</span><strong>{bundle.name}</strong><p>{bundle.description}</p>{bundle.setup?.length ? <small>Setup after install: {bundle.setup.join(' · ')}</small> : null}<div className="buttonRow">{bundle.installed ? <button className="danger" onClick={() => run('/api/bundles/uninstall', { id: bundle.id })}>Uninstall bundle</button> : <button onClick={() => run('/api/bundles/install', { id: bundle.id })}>Install bundle</button>}</div></div>;
+}
+
+function PackageRow({ pkg, run }: { pkg: PiPackage; run: (path: string, body?: Record<string, string>) => Promise<void> }) {
+  return <div className="row"><div><strong>{pkg.source}</strong><small>{pkg.path}</small></div><div><button onClick={() => run('/api/packages/update', { source: pkg.source })}>Update</button><button className="danger" onClick={() => run('/api/packages/remove', { source: pkg.source })}>Remove</button></div></div>;
 }
 
 function Env({ token }: { token: string }) {

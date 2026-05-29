@@ -4,6 +4,7 @@ export type Theme = 'harbor' | 'folio' | 'terminal' | 'atelier' | 'brutal';
 export type Provider = { id: string; name: string; auth: { configured: boolean; source?: string; label?: string } };
 export type ModelOption = { provider: string; id: string; name: string; displayName: string; reasoning: boolean };
 export type PiPackage = { source: string; path?: string };
+export type CapabilityBundle = { id: string; name: string; description?: string; installed: boolean; setup?: string[] };
 export type SelectedModel = { provider: string; id: string } | undefined;
 export type ChatMessage = { id: string; role: 'user' | 'assistant' | 'event'; text: string; kind?: 'status' | 'tool' | 'error' | null; createdAt?: string };
 export type HarborSession = { id: string; name: string; createdAt: string; updatedAt: string; linkedChannels?: Array<{ channel: string; identity: string }> };
