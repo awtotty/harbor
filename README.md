@@ -2,7 +2,28 @@
 
 Harbor is a Docker-first, self-hostable Pi cloud agent appliance. It gives you an always-on personal AI computer with a web UI, Telegram bot access, real terminals, persistent sessions, and durable `/workspace`, `/config`, and `/home/agent` volumes.
 
-Harbor is currently an early prototype meant for dogfooding by technical users.
+Harbor is currently an early prototype meant for dogfooding by single technical users. It is intentionally a single-user, high-trust appliance; multi-user/team access is not a current product goal.
+
+## Trust model
+
+Harbor is not a hardened multi-tenant sandbox. Treat anyone with access to the web UI, Telegram bot, terminals, or SSH as having shell access to the container and to the persistent volumes. Run Harbor on localhost or a private network such as Tailscale, use a strong password, and do not expose it directly to the public internet.
+
+## Choose your path
+
+| Goal | Start here |
+| --- | --- |
+| Try Harbor locally with Docker | [Run with Docker](#run-with-docker) |
+| Deploy an always-on private instance | [`docs/VPS_TAILSCALE.md`](docs/VPS_TAILSCALE.md) |
+| Understand Docker settings and volumes | [`docs/DOCKER.md`](docs/DOCKER.md) |
+| Understand what persists | [`docs/PERSISTENCE.md`](docs/PERSISTENCE.md) |
+| Develop Harbor without Docker | [Development without Docker](#development-without-docker) |
+
+## What you need
+
+- Docker and Docker Compose for the recommended user path.
+- A Pi/OpenAI-compatible account or provider auth configured through Harbor's Config screen before chat will work.
+- Tailscale or another trusted private access layer for always-on remote access.
+- Optional: a Telegram bot token if you want remote messaging from Telegram.
 
 ## Prototype features
 
@@ -26,13 +47,24 @@ Harbor is currently an early prototype meant for dogfooding by technical users.
 
 ```bash
 cp .env.example .env
-# edit .env if needed
+# edit .env if needed; use a strong HARBOR_PASSWORD for anything persistent
 docker compose up --build
 ```
 
 Open http://localhost:8080 and log in with the password from `.env`.
 
 For local development, the default `.env.example` values bind Harbor to `127.0.0.1`.
+
+### First run checklist
+
+After the container is running:
+
+1. Log in to the web UI.
+2. Open Config/System.
+3. Configure provider auth and choose a model.
+4. Check package/status surfaces for obvious setup errors.
+5. Send a short test prompt in Chat.
+6. If chat fails, check `/status`, the System page, and `docker compose logs -f harbor`.
 
 ### Docker configuration
 
@@ -48,13 +80,15 @@ HARBOR_SSH_PORT=2222
 HARBOR_DEV_BIND_HOST=127.0.0.1
 ```
 
-Compose publishes container ports `3000-3099` for agent-started dev servers. Set `HARBOR_DEV_BIND_HOST` to your Tailscale IP for Tailnet access to those ports.
+Compose publishes container ports `3000-3099` for agent-started dev servers. This is the current dev-server access mechanism. Set `HARBOR_DEV_BIND_HOST` to your Tailscale IP for Tailnet access to those ports. A Harbor-authenticated reverse proxy is planned to reduce reliance on published port ranges.
 
 For private Tailnet access, bind `HARBOR_BIND_HOST` and optionally `HARBOR_SSH_BIND_HOST` to the host's Tailscale IP or MagicDNS-resolved interface. Avoid exposing Harbor directly to the public internet.
 
 Production guardrail: when `HARBOR_PRODUCTION=true`, Harbor refuses to start with the default `HARBOR_PASSWORD=harbor`.
 
-## Run locally without Docker
+## Development without Docker
+
+Docker Compose is the supported user path. The non-Docker path is mainly for Harbor contributors.
 
 ```bash
 pnpm install
@@ -67,6 +101,13 @@ pnpm start
 ```
 
 Open http://localhost:8080 and log in with `harbor` unless `HARBOR_PASSWORD` is set.
+
+Useful contributor commands:
+
+```bash
+pnpm run build
+pnpm test
+```
 
 ## Web UI
 

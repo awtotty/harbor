@@ -2,6 +2,8 @@
 
 Harbor is a Dockerized Pi cloud-agent appliance. The container starts SSH as root, then runs the Harbor Node/Pi SDK process as the `agent` user.
 
+Harbor is intentionally a single-user, high-trust personal appliance. It does not try to isolate multiple users from each other.
+
 ## Persistent volumes
 
 - `/workspace` — user projects and working files.
@@ -20,9 +22,20 @@ Container image layers are still ephemeral. Tools installed with `apt` inside a 
 
 ### Web chat
 
-`Web Chat -> /api/chat -> ChatService -> MessageRouter -> PiSessionRegistry -> Pi SDK`
+```text
+Browser Chat -> POST /api/chat/start -> ChatService -> MessageRouter -> PiSessionRegistry -> Pi SDK
+Browser SSE  <- GET /api/chat/runs/:runId/events <- ChatRunManager
+```
 
-`ChatService` persists normalized transcript messages to `/config/harbor.db`.
+`ChatService` persists normalized transcript messages to `/config/harbor.db`. The run-based API keeps chat responsive while using standard GET-based SSE for browser, proxy, and Tailnet compatibility.
+
+### Telegram chat
+
+```text
+Telegram Bot -> TelegramService -> ChatService -> MessageRouter -> PiSessionRegistry -> Pi SDK
+```
+
+Telegram uses the same `ChatService` path as web chat rather than duplicating Pi-session logic. Telegram-linked sessions are tracked with channel metadata; session names are not the source of truth for Telegram routing.
 
 ### Sessions
 
@@ -34,8 +47,8 @@ Package operations call Pi CLI commands using `PI_CODING_AGENT_DIR=/config/pi-ag
 
 ### Terminal
 
-Web terminals use `@xterm/xterm` in the browser and `node-pty` on the server. Terminal state is in-memory and does not survive server restarts.
+Web terminals use `@xterm/xterm` in the browser and `node-pty` on the server. Terminal state is in-memory and does not survive server restarts. The shell runs as `agent` and starts in `/workspace`.
 
-### Future channels
+### Future non-web channels
 
-Signal/SMS/etc. should call `ChatService.sendChatMessage(...)` rather than duplicating `/api/chat` logic.
+Additional messaging channels should call `ChatService.sendChatMessage(...)` rather than duplicating chat or Pi SDK session logic.
