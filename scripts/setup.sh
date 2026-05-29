@@ -120,12 +120,15 @@ prompt_dev_bind_host() {
 
 write_env() {
   if [[ -f "$ENV_FILE" ]]; then
+    local backup_file=".env.bak_$(date -u +%Y%m%d-%H%M%S)"
     echo
-    echo ".env already exists. Setup will update Harbor-managed values and keep other entries."
+    echo ".env already exists."
+    echo "Continuing will move it to $backup_file and create a new .env from this setup flow."
     confirm "Continue?" Y || exit 1
-  else
-    touch "$ENV_FILE"
+    mv "$ENV_FILE" "$backup_file"
+    echo "Previous .env saved as $backup_file"
   fi
+  : > "$ENV_FILE"
 
   upsert_env HARBOR_PASSWORD "$HARBOR_SETUP_PASSWORD"
   upsert_env HARBOR_PRODUCTION true
