@@ -118,16 +118,18 @@ prompt_dev_bind_host() {
   fi
 }
 
+prepare_env_file() {
+  if [[ ! -f "$ENV_FILE" ]]; then return; fi
+  local backup_file=".env.bak_$(date -u +%Y%m%d-%H%M%S)"
+  echo
+  echo ".env already exists."
+  echo "Continuing will move it to $backup_file and create a new .env from this setup flow."
+  confirm "Continue?" Y || exit 1
+  mv "$ENV_FILE" "$backup_file"
+  echo "Previous .env saved as $backup_file"
+}
+
 write_env() {
-  if [[ -f "$ENV_FILE" ]]; then
-    local backup_file=".env.bak_$(date -u +%Y%m%d-%H%M%S)"
-    echo
-    echo ".env already exists."
-    echo "Continuing will move it to $backup_file and create a new .env from this setup flow."
-    confirm "Continue?" Y || exit 1
-    mv "$ENV_FILE" "$backup_file"
-    echo "Previous .env saved as $backup_file"
-  fi
   : > "$ENV_FILE"
 
   upsert_env HARBOR_PASSWORD "$HARBOR_SETUP_PASSWORD"
@@ -173,6 +175,7 @@ main() {
     exit 1
   fi
 
+  prepare_env_file
   prompt_password
   prompt_bind_host
   prompt_dev_bind_host
