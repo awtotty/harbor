@@ -116,6 +116,7 @@ docker compose build \
   --build-arg HARBOR_BUILT_AT="$HARBOR_BUILT_AT" \
   harbor
 
+docker compose stop harbor
 docker compose up -d harbor
 
 echo "Waiting for Harbor health check..."

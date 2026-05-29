@@ -33,7 +33,7 @@ scripts/harbor-import.sh backups/harbor.tgz --yes
 scripts/harbor-update.sh --target v0.1.0
 ```
 
-`harbor-update.sh` fetches Git tags, checks out the requested release tag, rebuilds Harbor with version metadata, restarts Docker Compose, and waits for `/healthz`. By default it creates a pre-update backup first.
+`harbor-update.sh` fetches Git tags, checks out the requested release tag, rebuilds Harbor with version metadata, stops the old Harbor container to release published ports, starts the updated container, and waits for `/healthz`. By default it creates a pre-update backup first.
 
 For dogfooding against `main`, you can still use the manual flow:
 
@@ -90,7 +90,9 @@ After the external updater exists, the intended flow is:
    - creates a pre-update backup
    - fetches GitHub tags/releases
    - checks out the requested release tag
-   - rebuilds/restarts Harbor with Docker Compose
+   - rebuilds Harbor with Docker Compose
+   - stops the old Harbor container so published ports such as the temporary `3000-3099` dev range are released
+   - starts the updated Harbor container
    - waits for `/healthz`
    - records success/failure and backup path
 6. The UI/chat reports that Harbor may disconnect during restart and shows the final result after reconnect.
