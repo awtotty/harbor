@@ -1,6 +1,6 @@
 # Docker Deployment
 
-Harbor is intended to run as a Docker appliance. The image contains the Harbor web server, Pi SDK integration, PTY terminal support, SSH server, default Pi packages, and common command-line tools.
+Harbor is intended to run as a Docker appliance. The image contains the Harbor web server, Pi SDK integration, PTY terminal support, default Pi packages, and common command-line tools.
 
 ## Quick start
 
@@ -16,7 +16,7 @@ Open Harbor at:
 http://localhost:8080
 ```
 
-Default Compose bindings are localhost-only for both web and SSH.
+Default Compose bindings are localhost-only for the web UI and agent-started dev-server ports.
 
 ## Environment
 
@@ -27,8 +27,6 @@ HARBOR_PASSWORD=change-me
 HARBOR_PRODUCTION=false
 HARBOR_BIND_HOST=127.0.0.1
 HARBOR_PORT=8080
-HARBOR_SSH_BIND_HOST=127.0.0.1
-HARBOR_SSH_PORT=2222
 ```
 
 Container paths are normally fixed by Compose:
@@ -72,19 +70,17 @@ Local-only default:
 
 ```env
 HARBOR_BIND_HOST=127.0.0.1
-HARBOR_SSH_BIND_HOST=127.0.0.1
 ```
 
 Tailnet/private host example:
 
 ```env
 HARBOR_BIND_HOST=100.x.y.z
-HARBOR_SSH_BIND_HOST=100.x.y.z
 ```
 
 Public `0.0.0.0` binding is not recommended unless Harbor is behind a trusted private network, VPN, or reverse proxy with strong authentication.
 
-## Terminal and SSH
+## Terminal
 
 Harbor runs the web server and terminal PTYs as the `agent` user. The image grants `agent` passwordless sudo because Harbor is intended as a high-trust personal agent appliance.
 
@@ -97,23 +93,17 @@ The web terminal starts in `/workspace`. `PATH` includes:
 /usr/local/bin
 ```
 
-The Docker image installs `/usr/local/bin/pi` as a wrapper around the bundled Pi CLI, so `pi` is available in web terminals and SSH sessions.
+The Docker image installs `/usr/local/bin/pi` as a wrapper around the bundled Pi CLI, so `pi` is available in web terminals.
 
-SSH is exposed through Compose as:
+Use the web terminal for shell access inside Harbor, or use host/infrastructure access for out-of-band administration.
 
-```text
-${HARBOR_SSH_BIND_HOST:-127.0.0.1}:${HARBOR_SSH_PORT:-2222} -> container port 22
-```
-
-Compose also publishes container ports `3000-3099` for dev servers started by the agent:
+Compose publishes container ports `3000-3099` for dev servers started by the agent:
 
 ```text
 ${HARBOR_DEV_BIND_HOST:-127.0.0.1}:3000-3099 -> container ports 3000-3099
 ```
 
 Leave `HARBOR_DEV_BIND_HOST=127.0.0.1` for local-only access, or set it to the host's Tailscale IP for Tailnet access.
-
-Configure authorized keys from the Harbor Config page.
 
 ## Updating
 

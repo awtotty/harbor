@@ -4,7 +4,6 @@ services:
     restart: unless-stopped
     ports:
       - "${HARBOR_BIND_HOST:-127.0.0.1}:${HARBOR_PORT:-8080}:8080"
-      - "${HARBOR_SSH_BIND_HOST:-127.0.0.1}:${HARBOR_SSH_PORT:-2222}:22"
       - "${HARBOR_DEV_BIND_HOST:-127.0.0.1}:3000-3099:3000-3099"
     environment:
       HARBOR_PASSWORD: ${HARBOR_PASSWORD:-harbor}

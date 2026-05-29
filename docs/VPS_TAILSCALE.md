@@ -90,9 +90,6 @@ HARBOR_PRODUCTION=true
 HARBOR_BIND_HOST=100.x.y.z
 HARBOR_PORT=8080
 
-# Optional: expose container SSH only on Tailscale too.
-HARBOR_SSH_BIND_HOST=100.x.y.z
-HARBOR_SSH_PORT=2222
 ```
 
 Do not leave `HARBOR_PASSWORD=harbor` with `HARBOR_PRODUCTION=true`; Harbor will refuse to start.
@@ -251,7 +248,6 @@ Recommended public inbound on a VPS:
 Recommended private inbound over Tailscale:
 
 - Harbor web: `8080`
-- Harbor container SSH: `2222` if you use it
 
 If you bind Harbor to the Tailscale IP as shown above, the web UI is not listening on the public interface.
 

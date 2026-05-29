@@ -6,7 +6,7 @@ Harbor is currently an early prototype meant for dogfooding by single technical 
 
 ## Trust model
 
-Harbor is not a hardened multi-tenant sandbox. Treat anyone with access to the web UI, Telegram bot, terminals, or SSH as having shell access to the container and to the persistent volumes. Run Harbor on localhost or a private network such as Tailscale, use a strong password, and do not expose it directly to the public internet.
+Harbor is not a hardened multi-tenant sandbox. Treat anyone with access to the web UI, Telegram bot, or terminals as having shell access to the container and to the persistent volumes. Run Harbor on localhost or a private network such as Tailscale, use a strong password, and do not expose it directly to the public internet.
 
 ## Choose your path
 
@@ -36,7 +36,6 @@ Harbor is not a hardened multi-tenant sandbox. Treat anyone with access to the w
 - Telegram bot integration for messaging your agent remotely
 - Real web terminals backed by PTY/xterm
 - `pi` CLI available inside the container terminal as the `agent` user
-- SSH access into the container
 - Pi package management with default packages for web access, subagents, processes, and context-mode
 - Model provider auth and model selection
 - Environment editor writing `/config/harbor.env`
@@ -75,14 +74,12 @@ HARBOR_PASSWORD=change-me
 HARBOR_PRODUCTION=false
 HARBOR_BIND_HOST=127.0.0.1
 HARBOR_PORT=8080
-HARBOR_SSH_BIND_HOST=127.0.0.1
-HARBOR_SSH_PORT=2222
 HARBOR_DEV_BIND_HOST=127.0.0.1
 ```
 
 Compose publishes container ports `3000-3099` for agent-started dev servers. This is the current dev-server access mechanism. Set `HARBOR_DEV_BIND_HOST` to your Tailscale IP for Tailnet access to those ports. A Harbor-authenticated reverse proxy is planned to reduce reliance on published port ranges.
 
-For private Tailnet access, bind `HARBOR_BIND_HOST` and optionally `HARBOR_SSH_BIND_HOST` to the host's Tailscale IP or MagicDNS-resolved interface. Avoid exposing Harbor directly to the public internet.
+For private Tailnet access, bind `HARBOR_BIND_HOST` to the host's Tailscale IP or MagicDNS-resolved interface. Avoid exposing Harbor directly to the public internet.
 
 Production guardrail: when `HARBOR_PRODUCTION=true`, Harbor refuses to start with the default `HARBOR_PASSWORD=harbor`.
 
@@ -116,7 +113,7 @@ The web UI has four primary areas:
 - Sessions sidebar — create, select, and archive chats.
 - Chat — live Pi-backed conversations with grouped activity/tool events.
 - Terminal — browser terminal attached to a real PTY inside the container.
-- Config/System — provider auth, model selection, packages, Telegram, SSH keys, env, status, and observability.
+- Config/System — provider auth, model selection, packages, Telegram, env, status, and observability.
 
 Web chat uses a run-based streaming API:
 
@@ -151,9 +148,9 @@ Harbor supports a Telegram bot channel for remote messaging:
 
 Telegram-linked sessions are tracked through channel metadata and shown as tags in the web sidebar. Session names are not used as channel source-of-truth.
 
-## Terminal and SSH
+## Terminal
 
-The web terminal runs as the `agent` user in `/workspace` and uses the persistent `/home/agent` home directory. The container also exposes SSH on the configured host port.
+The web terminal runs as the `agent` user in `/workspace` and uses the persistent `/home/agent` home directory. Use the web terminal for shell access inside Harbor, or use host/infrastructure access for out-of-band administration.
 
 Useful paths on `PATH` inside terminals:
 
@@ -194,7 +191,7 @@ See `docs/PERSISTENCE.md` for what survives rebuilds and where to put custom too
 
 ## Agent access
 
-Harbor intentionally gives the Pi agent broad access inside the container. Treat the web UI, terminals, SSH, and Telegram bot as high-trust interfaces equivalent to shell access.
+Harbor intentionally gives the Pi agent broad access inside the container. Treat the web UI, terminals, and Telegram bot as high-trust interfaces equivalent to shell access.
 
 Message flow:
 

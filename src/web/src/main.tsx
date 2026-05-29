@@ -205,7 +205,7 @@ function groupChatMessages(messages: ChatMessage[]): RenderItem[] {
   return items;
 }
 
-function Config({ token }: { token: string }) { return <section className="settingsScreen"><div className="screenHeader"><h2>Config</h2><p>Manage model providers, selected model, channels, Pi packages, SSH access, and environment.</p></div><Providers token={token} /><Models token={token} /><TelegramSettings token={token} /><Packages token={token} /><SshKeys token={token} /><Env token={token} /></section>; }
+function Config({ token }: { token: string }) { return <section className="settingsScreen"><div className="screenHeader"><h2>Config</h2><p>Manage model providers, selected model, channels, Pi packages, and environment.</p></div><Providers token={token} /><Models token={token} /><TelegramSettings token={token} /><Packages token={token} /><Env token={token} /></section>; }
 
 function Providers({ token }: { token: string }) {
   const [providers, setProviders] = useState<Provider[]>([]);
@@ -298,17 +298,6 @@ function Packages({ token }: { token: string }) {
   }
   async function install() { if (!source.trim()) return; await run('/api/packages/install', { source: source.trim() }); setSource(''); }
   return <div className="card"><div className="cardHeader"><div><h3>Packages</h3><p>Install, remove, and update Pi packages loaded by Harbor.</p></div><button onClick={() => run('/api/packages/update')}>Update all</button></div><div className="packageInstall"><input value={source} onChange={(e) => setSource(e.target.value)} placeholder="npm:pi-web-access, git URL, or local path" /><button onClick={install}>Install</button></div>{packages.map((pkg) => <div className="row" key={pkg.source}><div><strong>{pkg.source}</strong><small>{pkg.path}</small></div><div><button onClick={() => run('/api/packages/update', { source: pkg.source })}>Update</button><button className="danger" onClick={() => run('/api/packages/remove', { source: pkg.source })}>Remove</button></div></div>)}{log && <pre>{log}</pre>}</div>;
-}
-
-function SshKeys({ token }: { token: string }) {
-  const [authorizedKeys, setAuthorizedKeys] = useState('');
-  const [command, setCommand] = useState('');
-  useEffect(() => { void fetch('/api/ssh', { headers: { Authorization: `Bearer ${token}` } }).then((r) => r.ok ? r.json() : Promise.resolve({ authorizedKeys: '', command: '' })).then((d: { authorizedKeys?: string; command?: string }) => { setAuthorizedKeys(d.authorizedKeys ?? ''); setCommand(d.command ?? ''); }); }, [token]);
-  async function save() {
-    await fetch('/api/ssh/authorized-keys', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ authorizedKeys }) });
-    alert('Saved SSH keys');
-  }
-  return <div className="card"><div className="cardHeader"><div><h3>SSH</h3><p>Add public keys for shell access to the Harbor container.</p></div></div><div className="copyLine"><code>{command}</code></div><textarea className="keyBox" value={authorizedKeys} onChange={(e) => setAuthorizedKeys(e.target.value)} placeholder="ssh-ed25519 AAAA... you@example" /><div className="buttonRow"><button onClick={save}>Save keys</button></div></div>;
 }
 
 function Env({ token }: { token: string }) {

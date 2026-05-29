@@ -1,6 +1,6 @@
 # Harbor Architecture
 
-Harbor is a Dockerized Pi cloud-agent appliance. The container starts SSH as root, then runs the Harbor Node/Pi SDK process as the `agent` user.
+Harbor is a Dockerized Pi cloud-agent appliance. The container runs the Harbor Node/Pi SDK process as the `agent` user.
 
 Harbor is intentionally a single-user, high-trust personal appliance. It does not try to isolate multiple users from each other.
 
