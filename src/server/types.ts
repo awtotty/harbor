@@ -11,6 +11,7 @@ export type HarborMessage = {
 export type HarborEvent =
   | { type: 'status'; text: string }
   | { type: 'assistant_delta'; text: string }
+  | { type: 'assistant_message'; text: string }
   | { type: 'tool_event'; text: string }
   | { type: 'error'; message: string }
   | { type: 'auth'; url: string; instructions?: string }

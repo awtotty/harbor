@@ -1,5 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { sendChatMessage } from '../chat-service.js';
+import { handleHarborCommand } from '../commands.js';
 import { openSse } from '../sse.js';
 import type { RouteContext } from './context.js';
 
@@ -11,6 +12,8 @@ export async function registerChatRoutes(app: FastifyInstance, context: RouteCon
 
     const events: unknown[] = [];
     try {
+      const command = await handleHarborCommand({ text: message, channel: 'web', sessionId: body.sessionId || 'default' });
+      if (command) return { events: command.events, sessionId: command.sessionId };
       await sendChatMessage({
         router: context.router,
         sessionId: body.sessionId || 'default',
@@ -32,6 +35,11 @@ export async function registerChatRoutes(app: FastifyInstance, context: RouteCon
 
     const stream = openSse(reply);
     try {
+      const command = await handleHarborCommand({ text: message, channel: 'web', sessionId: body.sessionId || 'default' });
+      if (command) {
+        for (const event of command.events) stream.emit('event', event);
+        return;
+      }
       await sendChatMessage({
         router: context.router,
         sessionId: body.sessionId || 'default',

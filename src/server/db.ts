@@ -16,6 +16,7 @@ export type StoredSession = {
   createdAt: string;
   updatedAt: string;
   archivedAt?: string | null;
+  linkedChannels?: Array<{ channel: ChannelName; identity: string }>;
 };
 
 export type StoredMessage = {
@@ -50,6 +51,13 @@ export type SystemStatus = {
   lastOkAt?: string | null;
   lastErrorAt?: string | null;
   metadata?: unknown;
+};
+
+export type ChannelState = {
+  channel: ChannelName;
+  identity: string;
+  activeSessionId: string;
+  updatedAt: string;
 };
 
 const dbPath = `${configDir}/harbor.db`;
@@ -109,17 +117,28 @@ db.exec(`
     last_error_at text,
     metadata_json text
   );
+
+  create table if not exists channel_state (
+    channel text not null,
+    identity text not null,
+    active_session_id text not null,
+    updated_at text not null,
+    primary key (channel, identity),
+    foreign key (active_session_id) references sessions(id)
+  );
 `);
 
 export function listSessions(options: { archived?: boolean } = {}): StoredSession[] {
   ensureSession('default');
   const archived = options.archived === true;
-  return db.prepare(`
+  const sessions = db.prepare(`
     select id, name, pi_session_id as piSessionId, workspace_id as workspaceId, created_at as createdAt, updated_at as updatedAt, archived_at as archivedAt
     from sessions
     where ${archived ? 'archived_at is not null' : 'archived_at is null'}
     order by updated_at desc
-  `).all() as StoredSession[];
+  `).all() as unknown as StoredSession[];
+  const linked = db.prepare('select channel, identity from channel_state where active_session_id = ?');
+  return sessions.map((session) => ({ ...session, linkedChannels: linked.all(session.id) as Array<{ channel: ChannelName; identity: string }> }));
 }
 
 export function archiveSession(id: string): void {
@@ -152,7 +171,11 @@ export function ensureSession(id: string, workspaceId = 'default'): void {
     insert into sessions (id, name, pi_session_id, workspace_id, created_at, updated_at)
     values (?, ?, ?, ?, ?, ?)
     on conflict(id) do update set updated_at = excluded.updated_at
-  `).run(id, id, id, workspaceId, now, now);
+  `).run(id, defaultSessionName(id), id, workspaceId, now, now);
+}
+
+function defaultSessionName(id: string): string {
+  return id === 'default' ? 'Session' : id;
 }
 
 export function insertMessage(input: Omit<StoredMessage, 'createdAt'> & { createdAt?: string }): StoredMessage {
@@ -226,6 +249,27 @@ export function setSystemStatus(input: Omit<SystemStatus, 'updatedAt'>): SystemS
     on conflict(key) do update set status = excluded.status, summary = excluded.summary, updated_at = excluded.updated_at, last_ok_at = excluded.last_ok_at, last_error_at = excluded.last_error_at, metadata_json = excluded.metadata_json
   `).run(status.key, status.status, status.summary, status.updatedAt, status.lastOkAt ?? null, status.lastErrorAt ?? null, status.metadata === undefined ? null : JSON.stringify(status.metadata));
   return status;
+}
+
+export function setChannelActiveSession(channel: ChannelName, identity: string, sessionId: string): ChannelState {
+  ensureSession(sessionId);
+  const now = new Date().toISOString();
+  db.prepare(`
+    insert into channel_state (channel, identity, active_session_id, updated_at)
+    values (?, ?, ?, ?)
+    on conflict(channel, identity) do update set active_session_id = excluded.active_session_id, updated_at = excluded.updated_at
+  `).run(channel, identity, sessionId, now);
+  return { channel, identity, activeSessionId: sessionId, updatedAt: now };
+}
+
+export function getChannelActiveSession(channel: ChannelName, identity: string): string | undefined {
+  const row = db.prepare(`
+    select cs.active_session_id as activeSessionId
+    from channel_state cs
+    join sessions s on s.id = cs.active_session_id
+    where cs.channel = ? and cs.identity = ? and s.archived_at is null
+  `).get(channel, identity) as { activeSessionId?: string } | undefined;
+  return row?.activeSessionId;
 }
 
 export function listSystemStatus(): SystemStatus[] {

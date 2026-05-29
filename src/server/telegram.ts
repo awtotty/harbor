@@ -1,7 +1,8 @@
 import { readHarborConfig, writeHarborConfig, type TelegramConfig } from './app-config.js';
-import { recordEvent, setSystemStatus } from './db.js';
+import { createSession, getChannelActiveSession, recordEvent, setChannelActiveSession, setSystemStatus } from './db.js';
 import { MessageRouter } from './router.js';
 import { sendChatMessage } from './chat-service.js';
+import { handleHarborCommand } from './commands.js';
 
 type Log = { info: (obj: unknown, msg?: string) => void; error: (obj: unknown, msg?: string) => void };
 let loopStarted = false;
@@ -126,15 +127,27 @@ async function handleUpdate(router: MessageRouter, log: Log, update: any, botTok
     return;
   }
   log.info({ userId, chatId }, 'received telegram message');
+  const identity = String(chatId);
+  let sessionId = getChannelActiveSession('telegram', identity);
+  if (!sessionId) {
+    const session = createSession();
+    setChannelActiveSession('telegram', identity, session.id);
+    sessionId = session.id;
+  }
+  const command = await handleHarborCommand({ text, channel: 'telegram', sessionId, identity });
+  if (command) {
+    await sendTelegramMessage(botToken, chatId, command.text);
+    return;
+  }
   const chunks: string[] = [];
   await sendChatMessage({
     router,
-    sessionId: `telegram-${chatId}`,
+    sessionId,
     channel: 'telegram',
     senderId: userId,
     text,
     sink: (event) => {
-      if (event.type === 'assistant_delta') chunks.push(event.text);
+      if (event.type === 'assistant_delta' || event.type === 'assistant_message') chunks.push(event.text);
       if (event.type === 'error') chunks.push(`\nError: ${event.message}`);
     },
   });

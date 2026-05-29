@@ -32,7 +32,7 @@ function App() {
   const [sessions, setSessions] = useState<HarborSession[]>([]);
   const [terminals, setTerminals] = useState<TerminalInfo[]>([]);
   const [activeTerminalId, setActiveTerminalId] = useState<string>();
-  const [activeSessionId, setActiveSessionId] = useState(localStorage.getItem('harborActiveSessionId') ?? 'default');
+  const [activeSessionId, setActiveSessionId] = useState(localStorage.getItem('harborActiveSessionId') ?? '');
   useEffect(() => { if (token) { void loadSessions(); void loadTerminals(); } }, [token]);
   useEffect(() => { localStorage.setItem('harborActiveSessionId', activeSessionId); }, [activeSessionId]);
   useEffect(() => { localStorage.setItem('harborTheme', theme); }, [theme]);
@@ -54,7 +54,7 @@ function App() {
     const data = await res.json();
     const nextSessions = Array.isArray(data.sessions) ? data.sessions : [];
     setSessions(nextSessions);
-    if (!nextSessions.some((s: HarborSession) => s.id === activeSessionId)) setActiveSessionId(nextSessions[0]?.id ?? 'default');
+    if (!nextSessions.some((s: HarborSession) => s.id === activeSessionId)) setActiveSessionId(nextSessions[0]?.id ?? '');
   }
 
   async function loadTerminals() {
@@ -98,7 +98,7 @@ function App() {
     const data = await res.json();
     const nextSessions = Array.isArray(data.sessions) ? data.sessions : [];
     setSessions(nextSessions);
-    setActiveSessionId(nextSessions[0]?.id ?? 'default');
+    setActiveSessionId(nextSessions[0]?.id ?? '');
     setTab('chat');
   }
 
@@ -119,11 +119,21 @@ function App() {
 
   if (!token) return <main className={`login theme-${theme}`}><div className="brand"><span>H</span><h1>Harbor</h1></div><form onSubmit={login}><input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} /><button>Enter</button></form><p>Default password: harbor</p></main>;
 
-  return <main className={`shell theme-${theme}`}><aside><div className="brand"><span>H</span><div><h1>Harbor</h1></div></div><div className="sessionsNav"><div className="sessionsTitle"><strong>Sessions</strong><button title="New session" onClick={newSession}>+</button></div>{sessions.map((session) => <button key={session.id} className={activeSessionId === session.id && tab === 'chat' ? 'active sessionButton' : 'sessionButton'} onClick={() => { setActiveSessionId(session.id); setTab('chat'); }}><span>{session.name}</span><small>{formatRelativeTime(session.updatedAt)}</small></button>)}<div className="sessionsTitle terminalsTitle"><strong>Terminals</strong><button title="New terminal" onClick={newTerminal}>+</button></div>{terminals.map((terminal) => <button key={terminal.id} className={activeTerminalId === terminal.id && tab === 'terminal' ? 'active sessionButton terminalButton' : 'sessionButton terminalButton'} onClick={() => { setActiveTerminalId(terminal.id); setTab('terminal'); }}><span>{terminal.name}</span><small>{terminal.alive ? 'open' : 'closed'}</small></button>)}</div><nav><ThemeSelector theme={theme} setTheme={setTheme} />{(['config', 'system'] as Tab[]).map((name) => <button className={tab === name ? 'active' : ''} onClick={() => setTab(name)} key={name}>{name}</button>)}</nav></aside><div className="content">{tab === 'chat' && <Chat token={token} sessionId={activeSessionId} sessions={sessions} onSessionActivity={loadSessions} onArchiveSession={archiveActiveSession} canArchive={sessions.length > 1 || activeSessionId !== 'default'} />}{tab === 'terminal' && <Terminal token={token} terminalId={activeTerminalId} onClose={closeActiveTerminal} />}{tab === 'config' && <Config token={token} />}{tab === 'system' && <System token={token} />}</div></main>;
+  return <main className={`shell theme-${theme}`}><aside><div className="brand"><span>H</span><div><h1>Harbor</h1></div></div><div className="sessionsNav"><div className="sessionsTitle"><strong>Sessions</strong><button title="New session" onClick={newSession}>+</button></div>{sessions.map((session) => <button key={session.id} className={activeSessionId === session.id && tab === 'chat' ? 'active sessionButton' : 'sessionButton'} onClick={() => { setActiveSessionId(session.id); setTab('chat'); }}><span>{session.name}</span><small><span className="sessionTime">{formatRelativeTime(session.updatedAt)}</span><SessionTags session={session} /></small></button>)}<div className="sessionsTitle terminalsTitle"><strong>Terminals</strong><button title="New terminal" onClick={newTerminal}>+</button></div>{terminals.map((terminal) => <button key={terminal.id} className={activeTerminalId === terminal.id && tab === 'terminal' ? 'active sessionButton terminalButton' : 'sessionButton terminalButton'} onClick={() => { setActiveTerminalId(terminal.id); setTab('terminal'); }}><span>{terminal.name}</span><small>{terminal.alive ? 'open' : 'closed'}</small></button>)}</div><nav><ThemeSelector theme={theme} setTheme={setTheme} />{(['config', 'system'] as Tab[]).map((name) => <button className={tab === name ? 'active' : ''} onClick={() => setTab(name)} key={name}>{name}</button>)}</nav></aside><div className="content">{tab === 'chat' && (activeSessionId ? <Chat token={token} sessionId={activeSessionId} sessions={sessions} onSessionActivity={loadSessions} onArchiveSession={archiveActiveSession} canArchive={sessions.length > 0} /> : <NoSessions onNewSession={newSession} />)}{tab === 'terminal' && <Terminal token={token} terminalId={activeTerminalId} onClose={closeActiveTerminal} />}{tab === 'config' && <Config token={token} />}{tab === 'system' && <System token={token} />}</div></main>;
+}
+
+function NoSessions({ onNewSession }: { onNewSession: () => void | Promise<void> }) {
+  return <section className="chatScreen noSessionsScreen"><div className="empty"><h3>No active sessions</h3><p>All sessions are archived. Create a new session to start chatting again.</p><button onClick={onNewSession}>New session</button></div></section>;
 }
 
 function ThemeSelector({ theme, setTheme }: { theme: Theme; setTheme: (theme: Theme) => void }) {
   return <div className="themePicker"><select aria-label="Theme" id="theme-select" value={theme} onChange={(event) => setTheme(event.target.value as Theme)}>{themes.map((item) => <option value={item.id} key={item.id}>{item.name}</option>)}</select></div>;
+}
+
+function SessionTags({ session }: { session: HarborSession }) {
+  const channels = [...new Set((session.linkedChannels ?? []).map((link) => link.channel).filter((channel) => channel !== 'web'))];
+  if (channels.length === 0) return null;
+  return <span className="sessionTags">{channels.map((channel) => <span className="sessionTag" key={channel}>{channel}</span>)}</span>;
 }
 
 function Chat({ token, sessionId, sessions, onSessionActivity, onArchiveSession, canArchive }: { token: string; sessionId: string; sessions: HarborSession[]; onSessionActivity: () => void | Promise<void>; onArchiveSession: () => void | Promise<void>; canArchive: boolean }) {
@@ -164,10 +174,15 @@ function Chat({ token, sessionId, sessions, onSessionActivity, onArchiveSession,
     const res = await fetch('/api/chat-json', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ message, sessionId }) });
     const data = await res.json();
     for (const event of data.events ?? []) {
-      if (event.type === 'assistant_delta') appendAssistant(event.text);
+      if (event.type === 'assistant_delta' || event.type === 'assistant_message') appendAssistant(event.text);
       if (event.type === 'tool_event') addMessage({ id: newId(), role: 'event', kind: 'tool', text: event.text.trim() });
       if (event.type === 'status') addMessage({ id: newId(), role: 'event', kind: 'status', text: event.text });
       if (event.type === 'error') addMessage({ id: newId(), role: 'event', kind: 'error', text: event.message });
+    }
+    if (data.sessionId && data.sessionId !== sessionId) {
+      await onSessionActivity();
+      localStorage.setItem('harborActiveSessionId', data.sessionId);
+      window.location.assign('/');
     }
     if (!res.ok) addMessage({ id: newId(), role: 'event', kind: 'error', text: data.error ?? `Request failed (${res.status})` });
     setBusy(false);
@@ -175,7 +190,7 @@ function Chat({ token, sessionId, sessions, onSessionActivity, onArchiveSession,
   }
 
   const activeSession = sessions.find((session) => session.id === sessionId);
-  return <section className="chatScreen"><div className="chatHeader"><div><h2>{activeSession?.name ?? 'Session'}</h2><p><code>/workspace</code> · <span>{sessionId}</span></p></div><div className="chatActions"><button className="ghost" onClick={onArchiveSession} disabled={busy || !canArchive}>Archive</button></div></div><div className="messageList">{messages.length === 0 && <div className="empty"><h3>Start a working session</h3><p>Ask Harbor to inspect files, run commands, review changes, or build something in this workspace.</p><div className="suggestions">{promptSuggestions.map((suggestion) => <button key={suggestion} onClick={() => setDraft(suggestion)}>{suggestion}</button>)}</div></div>}{messages.map((m) => <MessageBubble key={m.id} message={m} />)}<div ref={bottomRef} /></div><form className="composer" onSubmit={send}><textarea value={draft} onChange={(e) => setDraft(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void send(); } }} placeholder="Message Pi…" /><div className="composerFooter"><span>Enter to send · Shift+Enter for newline</span><button disabled={busy || !draft.trim()}>{busy ? 'Working…' : 'Send ↵'}</button></div></form></section>;
+  return <section className="chatScreen"><div className="chatHeader"><div><h2>{activeSession?.name ?? 'Session'}</h2><p><code>/workspace</code> · <span>{sessionId}</span></p></div><div className="chatActions"><button className="ghost" onClick={onArchiveSession} disabled={busy || !canArchive}>Archive</button></div></div><div className="messageList">{messages.length === 0 && <div className="empty"><h3>Start a working session</h3><p>Ask Harbor to inspect files, run commands, review changes, or build something in this workspace.</p><div className="suggestions">{promptSuggestions.map((suggestion) => <button key={suggestion} onClick={() => setDraft(suggestion)}>{suggestion}</button>)}</div></div>}{messages.map((m) => <MessageBubble key={m.id} message={m} />)}<div ref={bottomRef} /></div><form className="composer" onSubmit={send}><textarea value={draft} onChange={(e) => setDraft(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void send(); } }} placeholder="Message agent…" /><div className="composerFooter"><span>Enter to send · Shift+Enter for newline</span><button disabled={busy || !draft.trim()}>{busy ? 'Working…' : 'Send ↵'}</button></div></form></section>;
 }
 
 function Config({ token }: { token: string }) { return <section className="settingsScreen"><div className="screenHeader"><h2>Config</h2><p>Manage model providers, selected model, channels, Pi packages, SSH access, and environment.</p></div><Providers token={token} /><Models token={token} /><TelegramSettings token={token} /><Packages token={token} /><SshKeys token={token} /><Env token={token} /></section>; }

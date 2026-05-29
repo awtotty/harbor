@@ -133,7 +133,7 @@ code { color: var(--accent); font-family: var(--font-mono); }
 
 .shell { display: grid; grid-template-columns: 280px minmax(0, 1fr); height: 100vh; overflow: hidden; }
 aside { position: sticky; top: 0; height: 100vh; min-height: 0; display: flex; flex-direction: column; gap: 22px; padding: 22px; border-right: 1px solid var(--border); background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(18px); overflow: hidden; }
-.content { min-width: 0; padding: 28px; overflow: auto; }
+.content { min-width: 0; min-height: 0; padding: 22px 28px; overflow: auto; display: flex; flex-direction: column; }
 .brand { display: flex; align-items: center; gap: 12px; }
 .brand span { display: grid; place-items: center; width: 42px; height: 42px; border-radius: var(--radius-sm); background: var(--brand-bg); color: white; font-weight: 900; box-shadow: inset 0 1px 0 #ffffff44, var(--shadow); }
 h1, h2, h3 { font-family: var(--font-display); }
@@ -146,9 +146,12 @@ h3 { margin: 0; letter-spacing: -.02em; font-size: 18px; }
 .sessionsTitle { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2px; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; }
 .sessionsTitle button { padding: 0; width: 28px; height: 28px; min-height: 28px; border-radius: var(--radius-sm); line-height: 1; font-size: 16px; }
 .sessionButton { display: grid; justify-items: stretch; justify-content: stretch; gap: 4px; width: 100%; overflow: hidden; text-align: left; background: transparent; border-color: transparent; padding: 9px 10px; }
-.sessionButton span, .sessionButton small { display: block; width: 100%; text-align: left; }
-.sessionButton span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.sessionButton small { font-size: 12px; }
+.sessionButton > span, .sessionButton > small { display: block; width: 100%; text-align: left; }
+.sessionButton > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sessionButton small { font-size: 12px; display: flex; align-items: center; gap: 5px; flex-wrap: nowrap; overflow: hidden; white-space: nowrap; }
+.sessionTags { display: inline-flex; gap: 4px; flex: 0 0 auto; width: auto; margin-left: auto; }
+.sessionTag { display: inline-flex; width: auto; border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--border)); color: var(--accent); border-radius: 999px; padding: 0 5px; font-size: 9px; line-height: 1.35; text-transform: capitalize; }
+.sessionTime { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .sessionButton.active { background: color-mix(in srgb, var(--accent) 17%, var(--panel)); border-color: var(--accent); }
 .terminalsTitle { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border); }
 .terminalButton small { color: var(--accent); }
@@ -160,7 +163,8 @@ nav button { justify-content: flex-start; text-align: left; text-transform: capi
 
 .login { max-width: 390px; margin: 15vh auto; display: grid; gap: 18px; padding: 30px; border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); }
 .login form { display: grid; gap: 12px; }
-.chatScreen { height: calc(100vh - 56px); display: grid; grid-template-rows: auto 1fr auto; gap: 16px; max-width: 1160px; margin: 0 auto; }
+.chatScreen { flex: 1; min-height: 0; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; gap: 16px; width: 100%; max-width: 1160px; margin: 0 auto; }
+.noSessionsScreen { display: flex; align-items: center; justify-content: center; }
 .chatHeader, .screenHeader { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
 .chatHeader p, .screenHeader p { margin-top: 7px; }
 .chatActions { display: flex; align-items: center; gap: 10px; }
@@ -173,7 +177,7 @@ nav button { justify-content: flex-start; text-align: left; text-transform: capi
 .empty { margin: auto; text-align: center; max-width: 560px; color: var(--muted); border: 1px solid var(--border); border-radius: var(--radius); padding: 36px; background: color-mix(in srgb, var(--panel) 88%, transparent); box-shadow: var(--shadow); }
 .empty h3 { color: var(--text); margin-bottom: 8px; font-size: 24px; }
 .suggestions { display: grid; gap: 8px; margin-top: 22px; }
-.suggestions button { text-align: left; background: var(--panel-2); }
+.suggestions button { justify-content: flex-start; text-align: left; background: var(--panel-2); }
 .bubble { display: grid; grid-template-columns: 42px minmax(0, 1fr); gap: 12px; max-width: 860px; }
 .bubble.user { align-self: flex-end; grid-template-columns: minmax(0, 1fr) 42px; }
 .bubble.user .avatar { grid-column: 2; grid-row: 1; background: var(--accent-2); }

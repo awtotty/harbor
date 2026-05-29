@@ -19,7 +19,7 @@ export async function sendChatMessage(input: SendChatInput): Promise<void> {
   let assistantMessageId: string | undefined;
 
   const persistAndSend = (event: HarborEvent) => {
-    if (event.type === 'assistant_delta') {
+    if (event.type === 'assistant_delta' || event.type === 'assistant_message') {
       if (!assistantMessageId) {
         assistantMessageId = crypto.randomUUID();
         insertMessage({ id: assistantMessageId, sessionId, role: 'assistant', channel, senderId: 'pi', text: '' });
