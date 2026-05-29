@@ -5,6 +5,14 @@ Harbor is intended to run as a Docker appliance. The image contains the Harbor w
 ## Quick start
 
 ```bash
+scripts/setup.sh
+```
+
+The setup script writes `.env`, starts Harbor, and configures update support for the System page and `/update` command.
+
+For manual setup:
+
+```bash
 cp .env.example .env
 # edit HARBOR_PASSWORD before running anywhere persistent
 docker compose up --build

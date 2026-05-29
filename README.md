@@ -46,12 +46,18 @@ Harbor is not a hardened multi-tenant sandbox. Treat anyone with access to the w
 ## Run with Docker
 
 ```bash
+scripts/setup.sh
+```
+
+The interactive setup writes `.env`, starts Harbor, and configures update support. Open the printed URL and log in with the password you chose.
+
+Manual Docker start is also supported:
+
+```bash
 cp .env.example .env
 # edit .env if needed; use a strong HARBOR_PASSWORD for anything persistent
 docker compose up --build
 ```
-
-Open http://localhost:8080 and log in with the password from `.env`.
 
 For local development, the default `.env.example` values bind Harbor to `127.0.0.1`.
 
