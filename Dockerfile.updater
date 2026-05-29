@@ -6,7 +6,8 @@ WORKDIR /app
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN corepack enable && pnpm install --frozen-lockfile
 COPY . .
-RUN pnpm run build
+RUN git config --global --add safe.directory /deploy \
+  && pnpm run build
 
 ENV HARBOR_UPDATER_PORT=8787 \
     HARBOR_DEPLOY_DIR=/deploy

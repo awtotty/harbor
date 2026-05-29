@@ -82,6 +82,7 @@ function statusBody() {
 }
 
 function appendLog(text: string) {
+  process.stdout.write(text);
   for (const line of text.split(/(?<=\n)/)) {
     if (line) state.log.push(line);
   }
