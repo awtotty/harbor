@@ -105,6 +105,14 @@ SSH is exposed through Compose as:
 ${HARBOR_SSH_BIND_HOST:-127.0.0.1}:${HARBOR_SSH_PORT:-2222} -> container port 22
 ```
 
+Compose also publishes container ports `3000-3099` for dev servers started by the agent:
+
+```text
+${HARBOR_DEV_BIND_HOST:-127.0.0.1}:3000-3099 -> container ports 3000-3099
+```
+
+Leave `HARBOR_DEV_BIND_HOST=127.0.0.1` for local-only access, or set it to the host's Tailscale IP for Tailnet access.
+
 Configure authorized keys from the Harbor Config page.
 
 ## Updating

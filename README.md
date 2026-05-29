@@ -45,7 +45,10 @@ HARBOR_BIND_HOST=127.0.0.1
 HARBOR_PORT=8080
 HARBOR_SSH_BIND_HOST=127.0.0.1
 HARBOR_SSH_PORT=2222
+HARBOR_DEV_BIND_HOST=127.0.0.1
 ```
+
+Compose publishes container ports `3000-3099` for agent-started dev servers. Set `HARBOR_DEV_BIND_HOST` to your Tailscale IP for Tailnet access to those ports.
 
 For private Tailnet access, bind `HARBOR_BIND_HOST` and optionally `HARBOR_SSH_BIND_HOST` to the host's Tailscale IP or MagicDNS-resolved interface. Avoid exposing Harbor directly to the public internet.
 

@@ -79,6 +79,10 @@ Use daily workflow friction to harden the appliance.
   - names
   - reconnect behavior
   - cwd/status display
+- Robust dev-server reverse proxy:
+  - route Harbor-authenticated paths like `/proxy/:port/` to container-local agent-started apps
+  - support WebSocket/HMR where possible
+  - reduce reliance on Docker-published dev port ranges
 - Config reset actions:
   - reset Telegram token
   - clear auth/model config
