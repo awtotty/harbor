@@ -149,20 +149,31 @@ function Chat({ token, sessionId, activeSessionUpdatedAt, sessions, onSessionAct
       finishSend();
       return;
     }
-    const streamRes = await fetch(`/api/chat/runs/${startData.runId}/events`, { headers: { Authorization: `Bearer ${token}` } });
-    if (!streamRes.ok) {
-      addMessage({ id: newId(), role: 'event', kind: 'error', text: `Stream failed (${streamRes.status})` });
-      finishSend();
-      return;
+    let lastEventId = 0;
+    let streamDone = false;
+    for (let attempt = 0; attempt < 3 && !streamDone; attempt++) {
+      const streamRes = await fetch(`/api/chat/runs/${startData.runId}/events?lastEventId=${lastEventId}`, { headers: { Authorization: `Bearer ${token}` } });
+      if (!streamRes.ok) {
+        addMessage({ id: newId(), role: 'event', kind: 'error', text: `Stream failed (${streamRes.status})` });
+        break;
+      }
+      const result = await readEvents(streamRes, (event, id) => {
+        if (id !== undefined) lastEventId = Math.max(lastEventId, id);
+        if (event.type === 'assistant_delta' || event.type === 'assistant_message') appendAssistant(event.text);
+        if (event.type === 'tool_event') addMessage({ id: newId(), role: 'event', kind: 'tool', text: event.text.trim(), createdAt: new Date().toISOString() });
+        if (event.type === 'status') addMessage({ id: newId(), role: 'event', kind: 'status', text: event.text, createdAt: new Date().toISOString() });
+        if (event.type === 'error') addMessage({ id: newId(), role: 'event', kind: 'error', text: event.message, createdAt: new Date().toISOString() });
+      }, (done) => {
+        streamDone = true;
+        if (done.sessionId && done.sessionId !== sessionId) onSwitchSession(done.sessionId);
+      });
+      if (result.lastEventId !== undefined) lastEventId = Math.max(lastEventId, result.lastEventId);
+      if (!result.done && !streamDone) {
+        const statusRes = await fetch(`/api/chat/runs/${startData.runId}`, { headers: { Authorization: `Bearer ${token}` } });
+        const statusData = statusRes.ok ? await statusRes.json() : undefined;
+        if (statusData?.run?.status !== 'running') streamDone = true;
+      }
     }
-    await readEvents(streamRes, (event) => {
-      if (event.type === 'assistant_delta' || event.type === 'assistant_message') appendAssistant(event.text);
-      if (event.type === 'tool_event') addMessage({ id: newId(), role: 'event', kind: 'tool', text: event.text.trim(), createdAt: new Date().toISOString() });
-      if (event.type === 'status') addMessage({ id: newId(), role: 'event', kind: 'status', text: event.text, createdAt: new Date().toISOString() });
-      if (event.type === 'error') addMessage({ id: newId(), role: 'event', kind: 'error', text: event.message, createdAt: new Date().toISOString() });
-    }, (done) => {
-      if (done.sessionId && done.sessionId !== sessionId) onSwitchSession(done.sessionId);
-    });
     finishSend();
     onSessionActivity();
   }

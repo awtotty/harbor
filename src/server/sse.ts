@@ -1,7 +1,7 @@
 import type { FastifyReply } from 'fastify';
 
 export type SseStream = {
-  emit: (event: string, data: unknown) => void;
+  emit: (event: string, data: unknown, id?: number) => void;
   close: () => void;
 };
 
@@ -19,7 +19,8 @@ export function openSse(reply: FastifyReply): SseStream {
   }, 15_000);
   keepalive.unref?.();
   return {
-    emit: (event: string, data: unknown) => {
+    emit: (event: string, data: unknown, id?: number) => {
+      if (id !== undefined) reply.raw.write(`id: ${id}\n`);
       reply.raw.write(`event: ${event}\n`);
       reply.raw.write(`data: ${JSON.stringify(data)}\n\n`);
     },

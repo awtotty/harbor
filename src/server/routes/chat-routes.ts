@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { startChatRun, getChatRun } from '../chat-runs.js';
+import { startChatRun, getChatRun, getChatRunSnapshot, snapshotRun } from '../chat-runs.js';
 import { openSse } from '../sse.js';
 import type { RouteContext } from './context.js';
 
@@ -12,23 +12,37 @@ export async function registerChatRoutes(app: FastifyInstance, context: RouteCon
     return { runId: run.id, sessionId: run.sessionId };
   });
 
+  app.get('/api/chat/runs/:runId', async (request, reply) => {
+    const { runId } = request.params as { runId: string };
+    const run = getChatRunSnapshot(runId);
+    if (!run) return reply.code(404).send({ error: 'Run not found' });
+    return { run };
+  });
+
   app.get('/api/chat/runs/:runId/events', async (request, reply) => {
     const { runId } = request.params as { runId: string };
     const run = getChatRun(runId);
     if (!run) return reply.code(404).send({ error: 'Run not found' });
 
+    const query = request.query as { lastEventId?: string };
+    const headerLastEventId = request.headers['last-event-id'];
+    const lastEventId = Number(Array.isArray(headerLastEventId) ? headerLastEventId[0] : headerLastEventId ?? query.lastEventId ?? 0);
     const stream = openSse(reply);
-    for (const event of run.events) stream.emit('event', event);
+
+    for (const runEvent of run.events) if (runEvent.id > lastEventId) stream.emit('event', runEvent.event, runEvent.id);
 
     if (run.status !== 'running') {
-      stream.emit('done', { status: run.status, sessionId: run.sessionId, error: run.error });
+      stream.emit('done', snapshotRun(run));
       stream.close();
       return;
     }
 
-    const onEvent = (event: unknown) => stream.emit('event', event);
+    const onEvent = (event: unknown) => {
+      const runEvent = event as { id: number; event: unknown };
+      stream.emit('event', runEvent.event, runEvent.id);
+    };
     const onDone = () => {
-      stream.emit('done', { status: run.status, sessionId: run.sessionId, error: run.error });
+      stream.emit('done', snapshotRun(run));
       stream.close();
     };
 
