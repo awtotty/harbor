@@ -228,7 +228,7 @@ nav button { justify-content: flex-start; text-align: left; text-transform: capi
 .manual, .packageInstall { display: grid; gap: 10px; }
 .packageInstall { grid-template-columns: 1fr auto; align-items: center; }
 .buttonRow { display: flex; gap: 10px; }
-.badge { border: 1px solid var(--border); border-radius: 999px; padding: 6px 10px; color: var(--muted); font-size: 12px; white-space: nowrap; }
+.badge { display: inline-flex; align-items: center; align-self: center; line-height: 1; border: 1px solid var(--border); border-radius: 999px; padding: 5px 9px; color: var(--muted); font-size: 12px; white-space: nowrap; }
 .badge.working { border-color: color-mix(in srgb, var(--accent) 45%, var(--border)); color: var(--accent); }
 .copyLine { border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--panel-2); padding: 12px; }
 .keyBox { min-height: 130px; font-family: var(--font-mono); }
