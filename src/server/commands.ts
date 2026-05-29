@@ -1,4 +1,5 @@
 import { createSession, listEvents, listSessions, listSystemStatus, setChannelActiveSession } from './db.js';
+import { getUpdateStatus, requestUpdate } from './updates.js';
 import type { ChannelName, HarborEvent } from './types.js';
 
 export type HarborCommandInput = {
@@ -23,6 +24,7 @@ export async function handleHarborCommand(input: HarborCommandInput): Promise<Ha
   if (command === '/help') return textResult(helpText());
   if (command === '/status') return textResult(statusText());
   if (command === '/sessions') return textResult(sessionsText());
+  if (command === '/update') return textResult(await updateText(args));
   if (command === '/new') {
     const name = args.join(' ').trim() || defaultSessionName(input.channel);
     const session = createSession(name);
@@ -43,7 +45,7 @@ function textResult(text: string): HarborCommandResult {
 }
 
 function helpText(): string {
-  return `Harbor commands\n\n/help — show this help\n/status — show Harbor system status\n/sessions — list active sessions\n/new [name] — create a new session`;
+  return `Harbor commands\n\n/help — show this help\n/status — show Harbor system status\n/sessions — list active sessions\n/new [name] — create a new session\n/update — show update status\n/update confirm — back up and update to the latest tag`;
 }
 
 function statusText(): string {
@@ -56,6 +58,35 @@ function statusText(): string {
     ? errors.map((event) => `- ${event.source}: ${event.title}${event.message ? ` — ${event.message}` : ''}`)
     : ['none'];
   return `Harbor status\n\n${statusLines.join('\n')}\n\nRecent errors:\n${errorLines.join('\n')}`;
+}
+
+async function updateText(args: string[]): Promise<string> {
+  const updates = await getUpdateStatus();
+  const lines = [
+    'Harbor updates',
+    '',
+    `Current: ${updates.current.version} (${updates.current.commit})`,
+    `Latest: ${updates.latest?.tag ?? 'unknown'}`,
+    `Updater: ${updates.updaterConfigured ? updates.updater?.running ? 'running' : 'configured' : 'not configured'}`,
+  ];
+  if (updates.message) lines.push(`Note: ${updates.message}`);
+  if (updates.updater?.lastRun?.error) lines.push(`Last updater error: ${updates.updater.lastRun.error}`);
+
+  if (args[0]?.toLowerCase() !== 'confirm') {
+    if (!updates.latest) return lines.join('\n');
+    if (!updates.available) return [...lines, '', 'Harbor is already on the latest tag.'].join('\n');
+    if (!updates.updaterConfigured) return [...lines, '', 'Update available, but the external updater is not configured. See docs/UPDATES.md.'].join('\n');
+    if (updates.updater?.running) return [...lines, '', 'An update is already running.'].join('\n');
+    return [...lines, '', `Update available. Run /update confirm to back up and update to ${updates.latest.tag}.`].join('\n');
+  }
+
+  if (!updates.latest) return [...lines, '', 'Cannot update because no latest tag was found.'].join('\n');
+  if (!updates.available) return [...lines, '', 'Harbor is already on the latest tag.'].join('\n');
+  if (!updates.updaterConfigured) return [...lines, '', 'Cannot update because the external updater is not configured. See docs/UPDATES.md.'].join('\n');
+  if (updates.updater?.running) return [...lines, '', 'An update is already running.'].join('\n');
+
+  await requestUpdate(updates.latest.tag);
+  return [...lines, '', `Update requested for ${updates.latest.tag}. Harbor may disconnect during restart.`].join('\n');
 }
 
 function sessionsText(): string {
