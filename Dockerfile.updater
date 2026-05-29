@@ -1,0 +1,15 @@
+FROM node:24-alpine
+
+RUN apk add --no-cache bash curl git docker-cli docker-cli-compose python3 make g++
+
+WORKDIR /app
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+RUN corepack enable && pnpm install --frozen-lockfile
+COPY . .
+RUN pnpm run build
+
+ENV HARBOR_UPDATER_PORT=8787 \
+    HARBOR_DEPLOY_DIR=/deploy
+
+EXPOSE 8787
+CMD ["node", "dist/updater/index.js"]

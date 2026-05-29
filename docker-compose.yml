@@ -16,6 +16,8 @@ services:
       HARBOR_CONFIG_DIR: /config
       HARBOR_WORKSPACE_DIR: /workspace
       HARBOR_TERMINAL_USER: agent
+      HARBOR_UPDATER_URL: ${HARBOR_UPDATER_URL:-http://harbor-updater:8787}
+      HARBOR_UPDATER_TOKEN: ${HARBOR_UPDATER_TOKEN:-}
       PI_CODING_AGENT_DIR: /config/pi-agent
       PI_CODING_AGENT_SESSION_DIR: /config/sessions
     volumes:
@@ -28,6 +30,19 @@ services:
       timeout: 5s
       retries: 3
       start_period: 20s
+
+  harbor-updater:
+    profiles: ["updater"]
+    build:
+      context: .
+      dockerfile: Dockerfile.updater
+    restart: unless-stopped
+    environment:
+      HARBOR_UPDATER_TOKEN: ${HARBOR_UPDATER_TOKEN:-}
+      HARBOR_DEPLOY_DIR: /deploy
+    volumes:
+      - ./:/deploy
+      - /var/run/docker.sock:/var/run/docker.sock
 
 volumes:
   harbor-workspace:

@@ -123,33 +123,31 @@ POST /rollback
 
 The updater should reject arbitrary refs by default and allow only GitHub release tags fetched from the configured Harbor repository.
 
-## Sidecar deployment sketch
+## Optional updater sidecar
 
-A future Compose profile may add:
+Harbor includes an optional `harbor-updater` Compose profile. To enable it, set a strong token in `.env`:
 
-```yaml
-services:
-  harbor-updater:
-    profiles: ["updater"]
-    # dedicated updater image/entrypoint
-    volumes:
-      - ./:/deploy
-      - /var/run/docker.sock:/var/run/docker.sock
-      - harbor-config:/config
-      - harbor-workspace:/workspace
-      - harbor-home:/home/agent
-    environment:
-      HARBOR_UPDATER_TOKEN: ${HARBOR_UPDATER_TOKEN}
+```bash
+HARBOR_UPDATER_TOKEN=$(openssl rand -hex 32)
+HARBOR_UPDATER_URL=http://harbor-updater:8787
 ```
 
-The main Harbor service would receive only:
+Then start Harbor with the updater profile:
+
+```bash
+docker compose --profile updater up --build -d
+```
+
+The sidecar exposes:
 
 ```text
-HARBOR_UPDATER_URL=http://harbor-updater:8787
-HARBOR_UPDATER_TOKEN=...
+GET  /status
+POST /update
 ```
 
-The sidecar has Docker access; the main app does not.
+The main Harbor service receives only `HARBOR_UPDATER_URL` and `HARBOR_UPDATER_TOKEN`. The sidecar has Docker socket access and a bind mount of the deployment checkout at `/deploy`; the main app does not.
+
+When configured, the System page can request an update. Harbor forwards a fixed update request to the sidecar, and the sidecar runs `scripts/harbor-update.sh --yes --target <tag>`.
 
 ## Rollback story
 
