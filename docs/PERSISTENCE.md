@@ -50,10 +50,12 @@ Recommended options:
 2. Place standalone binaries in `/config/bin`.
 3. Keep CLI auth/config in `/home/agent`.
 
-## Backups
+## Backups and restore
 
 Back up all three volumes for a full Harbor backup:
 
 - `/workspace`
 - `/config`
 - `/home/agent`
+
+See `VPS_TAILSCALE.md` for example backup and restore commands using Docker volumes.

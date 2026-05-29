@@ -167,7 +167,25 @@ or, if bound to the Tailscale IP:
 curl -fsS http://100.x.y.z:8080/healthz
 ```
 
-## 7. Backups
+### Inspect config and database
+
+Open a shell in the container:
+
+```bash
+docker compose exec harbor bash
+```
+
+Useful read-only checks:
+
+```bash
+ls -la /config /workspace /home/agent
+sqlite3 /config/harbor.db ".tables"
+sqlite3 /config/harbor.db "select id, name, updated_at, archived_at from sessions order by updated_at desc limit 10;"
+```
+
+Do not paste secret values from `/config/harbor.env`, `/config/harbor.json`, Pi auth files, or shell history into issues or chat unless you deliberately intend to share them.
+
+## 7. Backups and restore
 
 Harbor stores persistent state in Docker volumes:
 
@@ -185,6 +203,41 @@ for volume in harbor_harbor-config harbor_harbor-workspace harbor_harbor-home; d
   docker run --rm -v "$volume:/data:ro" -v "$HOME/harbor-backups:/backup" alpine \
     tar czf "/backup/$volume-$(date +%Y%m%d-%H%M%S).tgz" -C /data .
 done
+```
+
+### Restore onto a fresh host
+
+1. Install Docker, Git, and Tailscale on the new host.
+2. Clone Harbor and create `.env` with the desired bind host/password.
+3. Create empty volumes by starting and stopping Harbor once:
+
+```bash
+docker compose up -d --build
+docker compose down
+```
+
+4. Copy the backup archives into `~/harbor-backups` on the new host.
+5. Restore each archive into its matching Docker volume:
+
+```bash
+for volume in harbor_harbor-config harbor_harbor-workspace harbor_harbor-home; do
+  archive=$(ls -t "$HOME/harbor-backups/$volume"-*.tgz | head -1)
+  docker run --rm -v "$volume:/data" -v "$HOME/harbor-backups:/backup:ro" alpine \
+    sh -c "find /data -mindepth 1 -maxdepth 1 -exec rm -rf {} + && tar xzf /backup/$(basename "$archive") -C /data"
+done
+```
+
+6. Start Harbor again:
+
+```bash
+docker compose up -d
+```
+
+7. Check logs and health before using the restored instance:
+
+```bash
+docker compose logs -f harbor
+curl -fsS http://localhost:8080/healthz
 ```
 
 ## 8. Firewall notes
