@@ -1,6 +1,6 @@
 # Harbor Roadmap
 
-Harbor is an open-source, Docker-first, self-hostable Pi cloud agent appliance. The goal is to give an individual technical user an always-on personal AI computer they control: reachable from a private web UI, SSH, terminal, and messaging channels, with an optional hosted version later for convenience and managed compute.
+Harbor is an open-source, Docker-first, self-hostable Pi cloud agent appliance. The goal is to give an individual technical user an always-on personal AI computer they control: reachable from a private web UI, terminal, and messaging channels, with an optional hosted version later for convenience and managed compute.
 
 Harbor is intentionally a single-user, high-trust appliance. Multi-user/team access is not a current product goal.
 
@@ -21,7 +21,6 @@ Get Harbor working for a single power user on a local machine.
 - [x] Session list/new/archive basics
 - [x] Provider auth and model selection
 - [x] Pi package management
-- [x] SSH authorized key setup
 - [x] Real web terminal backed by PTY
 - [x] Multiple UI themes
 - [x] Telegram bot channel for messaging the agent
@@ -44,7 +43,6 @@ Deploy Harbor to a private VPS or home server behind Tailscale before broader pr
   - [x] explicit password configuration
 - [x] Firewall guidance:
   - [x] expose Harbor only over Tailscale
-  - [x] restrict SSH to Tailscale where possible
 - [ ] Backup and restore docs (partial):
   - [x] `/config`
   - [x] `/workspace`
