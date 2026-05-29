@@ -1,4 +1,4 @@
-export async function readEvents(res: Response, onData: (data: any) => void) {
+export async function readEvents(res: Response, onData: (data: any) => void, onDone?: (data: any) => void) {
   const reader = res.body?.getReader();
   const decoder = new TextDecoder();
   if (!reader) return;
@@ -10,9 +10,12 @@ export async function readEvents(res: Response, onData: (data: any) => void) {
     const events = buffer.split('\n\n');
     buffer = events.pop() ?? '';
     for (const event of events) {
+      const eventName = event.split('\n').find((l) => l.startsWith('event: '))?.slice(7);
       const line = event.split('\n').find((l) => l.startsWith('data: '));
       if (!line) continue;
-      onData(JSON.parse(line.slice(6)));
+      const data = JSON.parse(line.slice(6));
+      if (eventName === 'done') onDone?.(data);
+      else onData(data);
     }
   }
 }

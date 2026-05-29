@@ -142,20 +142,30 @@ function Chat({ token, sessionId, activeSessionUpdatedAt, sessions, onSessionAct
     setDraft('');
     beginSend();
     addMessage({ id: newId(), role: 'user', text: message, createdAt: new Date().toISOString() });
-    const res = await fetch('/api/chat-json', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ message, sessionId }) });
-    const data = await res.json();
-    for (const event of data.events ?? []) {
+    const startRes = await fetch('/api/chat/start', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ message, sessionId }) });
+    const startData = await startRes.json();
+    if (!startRes.ok || !startData.runId) {
+      addMessage({ id: newId(), role: 'event', kind: 'error', text: startData.error ?? `Request failed (${startRes.status})` });
+      finishSend();
+      return;
+    }
+    const streamRes = await fetch(`/api/chat/runs/${startData.runId}/events`, { headers: { Authorization: `Bearer ${token}` } });
+    if (!streamRes.ok) {
+      addMessage({ id: newId(), role: 'event', kind: 'error', text: `Stream failed (${streamRes.status})` });
+      finishSend();
+      return;
+    }
+    await readEvents(streamRes, (event) => {
       if (event.type === 'assistant_delta' || event.type === 'assistant_message') appendAssistant(event.text);
       if (event.type === 'tool_event') addMessage({ id: newId(), role: 'event', kind: 'tool', text: event.text.trim(), createdAt: new Date().toISOString() });
       if (event.type === 'status') addMessage({ id: newId(), role: 'event', kind: 'status', text: event.text, createdAt: new Date().toISOString() });
       if (event.type === 'error') addMessage({ id: newId(), role: 'event', kind: 'error', text: event.message, createdAt: new Date().toISOString() });
-    }
-    if (data.sessionId && data.sessionId !== sessionId) {
-      await onSessionActivity();
-      localStorage.setItem('harborActiveSessionId', data.sessionId);
-      window.location.assign('/');
-    }
-    if (!res.ok) addMessage({ id: newId(), role: 'event', kind: 'error', text: data.error ?? `Request failed (${res.status})` });
+    }, (done) => {
+      if (done.sessionId && done.sessionId !== sessionId) {
+        localStorage.setItem('harborActiveSessionId', done.sessionId);
+        window.location.assign('/');
+      }
+    });
     finishSend();
     onSessionActivity();
   }
