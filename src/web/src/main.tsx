@@ -2,12 +2,13 @@ import React, { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import '@xterm/xterm/css/xterm.css';
 import { Terminal } from './components/Terminal';
-import { MessageBubble } from './components/ToolEvent';
+import { ActivityGroup, MessageBubble } from './components/ToolEvent';
 import { promptSuggestions, themes } from './constants';
 import { readEvents } from './lib/sse';
 import { newId } from './lib/id';
 import { formatClockTime, formatRelativeTime } from './lib/time';
 import { useSessions } from './lib/useSessions';
+import { useChatMessages } from './lib/useChatMessages';
 import type { ChatMessage, EnvEntry, HarborEventLog, HarborSession, ModelOption, PiPackage, Provider, SelectedModel, SystemStatus, Tab, TelegramConfig, TerminalInfo, Theme } from './types';
 import './styles.css';
 
@@ -130,38 +131,16 @@ function SessionTags({ session }: { session: HarborSession }) {
 
 function Chat({ token, sessionId, activeSessionUpdatedAt, sessions, onSessionActivity, onArchiveSession, canArchive }: { token: string; sessionId: string; activeSessionUpdatedAt?: string; sessions: HarborSession[]; onSessionActivity: () => void | Promise<unknown>; onArchiveSession: () => void | Promise<void>; canArchive: boolean }) {
   const [draft, setDraft] = useState('');
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [busy, setBusy] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const { messages, busy, addMessage, appendAssistant, beginSend, finishSend } = useChatMessages({ token, sessionId, activeSessionUpdatedAt });
   useEffect(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), [messages]);
-  useEffect(() => { void loadMessages(); }, [token, sessionId, activeSessionUpdatedAt]);
-
-  async function loadMessages() {
-    const res = await fetch(`/api/sessions/${sessionId}/messages`, { headers: { Authorization: `Bearer ${token}` } });
-    if (!res.ok) {
-      setMessages([{ id: newId(), role: 'event', kind: 'error', text: `Failed to load messages (${res.status})` }]);
-      return;
-    }
-    const data = await res.json();
-    const nextMessages = Array.isArray(data.messages) ? data.messages : [];
-    setMessages(nextMessages.map((m: any) => ({ id: m.id, role: m.role, kind: m.kind, text: m.text, createdAt: m.createdAt })));
-  }
-
-  function addMessage(message: ChatMessage) { setMessages((old) => [...old, message]); }
-  function appendAssistant(text: string) {
-    setMessages((old) => {
-      const last = old.at(-1);
-      if (last?.role === 'assistant') return [...old.slice(0, -1), { ...last, text: last.text + text }];
-      return [...old, { id: newId(), role: 'assistant', text, createdAt: new Date().toISOString() }];
-    });
-  }
 
   async function send(event?: React.FormEvent) {
     event?.preventDefault();
     const message = draft.trim();
     if (!message || busy) return;
     setDraft('');
-    setBusy(true);
+    beginSend();
     addMessage({ id: newId(), role: 'user', text: message, createdAt: new Date().toISOString() });
     const res = await fetch('/api/chat-json', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ message, sessionId }) });
     const data = await res.json();
@@ -177,12 +156,35 @@ function Chat({ token, sessionId, activeSessionUpdatedAt, sessions, onSessionAct
       window.location.assign('/');
     }
     if (!res.ok) addMessage({ id: newId(), role: 'event', kind: 'error', text: data.error ?? `Request failed (${res.status})` });
-    setBusy(false);
+    finishSend();
     onSessionActivity();
   }
 
   const activeSession = sessions.find((session) => session.id === sessionId);
-  return <section className="chatScreen"><div className="chatHeader"><div><h2>{activeSession?.name ?? 'Session'}</h2><p><code>/workspace</code> · <span>{sessionId}</span></p></div><div className="chatActions"><button className="ghost" onClick={onArchiveSession} disabled={busy || !canArchive}>Archive</button></div></div><div className="messageList">{messages.length === 0 && <div className="empty"><h3>Start a working session</h3><p>Ask Harbor to inspect files, run commands, review changes, or build something in this workspace.</p><div className="suggestions">{promptSuggestions.map((suggestion) => <button key={suggestion} onClick={() => setDraft(suggestion)}>{suggestion}</button>)}</div></div>}{messages.map((m) => <MessageBubble key={m.id} message={m} />)}<div ref={bottomRef} /></div><form className="composer" onSubmit={send}><textarea value={draft} onChange={(e) => setDraft(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void send(); } }} placeholder="Message agent…" /><div className="composerFooter"><span>Enter to send · Shift+Enter for newline</span><button disabled={busy || !draft.trim()}>{busy ? 'Working…' : 'Send ↵'}</button></div></form></section>;
+  return <section className="chatScreen"><div className="chatHeader"><div><h2>{activeSession?.name ?? 'Session'}</h2><p><code>/workspace</code> · <span>{sessionId}</span></p></div><div className="chatActions"><button className="ghost" onClick={onArchiveSession} disabled={busy || !canArchive}>Archive</button></div></div><div className="messageList">{messages.length === 0 && <div className="empty"><h3>Start a working session</h3><p>Ask Harbor to inspect files, run commands, review changes, or build something in this workspace.</p><div className="suggestions">{promptSuggestions.map((suggestion) => <button key={suggestion} onClick={() => setDraft(suggestion)}>{suggestion}</button>)}</div></div>}{groupChatMessages(messages).map((item) => item.type === 'activity' ? <ActivityGroup key={item.id} messages={item.messages} /> : <MessageBubble key={item.message.id} message={item.message} />)}<div ref={bottomRef} /></div><form className="composer" onSubmit={send}><textarea value={draft} onChange={(e) => setDraft(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void send(); } }} placeholder="Message agent…" /><div className="composerFooter"><span>Enter to send · Shift+Enter for newline</span><button disabled={busy || !draft.trim()}>{busy ? 'Working…' : 'Send ↵'}</button></div></form></section>;
+}
+
+type RenderItem = { type: 'message'; message: ChatMessage } | { type: 'activity'; id: string; messages: ChatMessage[] };
+
+function groupChatMessages(messages: ChatMessage[]): RenderItem[] {
+  const items: RenderItem[] = [];
+  let toolGroup: ChatMessage[] = [];
+  const flushTools = () => {
+    if (toolGroup.length === 0) return;
+    items.push({ type: 'activity', id: `activity-${toolGroup[0].id}-${toolGroup.length}`, messages: toolGroup });
+    toolGroup = [];
+  };
+  for (const message of messages) {
+    if (message.role === 'event' && message.kind === 'tool') {
+      toolGroup.push(message);
+      continue;
+    }
+    flushTools();
+    if (message.role === 'event' && message.kind === 'status') continue;
+    items.push({ type: 'message', message });
+  }
+  flushTools();
+  return items;
 }
 
 function Config({ token }: { token: string }) { return <section className="settingsScreen"><div className="screenHeader"><h2>Config</h2><p>Manage model providers, selected model, channels, Pi packages, SSH access, and environment.</p></div><Providers token={token} /><Models token={token} /><TelegramSettings token={token} /><Packages token={token} /><SshKeys token={token} /><Env token={token} /></section>; }
