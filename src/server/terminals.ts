@@ -1,7 +1,7 @@
 import os from 'node:os';
 import { execFileSync } from 'node:child_process';
 import pty, { type IPty, type IPtyForkOptions } from 'node-pty';
-import { workspaceDir } from './config.js';
+import { loadEnvFromFile, workspaceDir } from './config.js';
 import { recordEvent, setSystemStatus } from './db.js';
 
 export type TerminalInfo = { id: string; name: string; createdAt: string; alive: boolean };
@@ -10,14 +10,15 @@ type Terminal = TerminalInfo & { pty: IPty; listeners: Set<(chunk: string) => vo
 const terminals = new Map<string, Terminal>();
 const terminalUser = process.env.HARBOR_TERMINAL_USER ?? 'agent';
 
-function terminalUserOptions(): Pick<IPtyForkOptions, 'uid' | 'gid' | 'env'> {
+async function terminalUserOptions(): Promise<Pick<IPtyForkOptions, 'uid' | 'gid' | 'env'>> {
   const env = {
     ...process.env,
+    ...(await loadEnvFromFile()),
     TERM: 'xterm-256color',
     USER: terminalUser,
     LOGNAME: terminalUser,
     HOME: `/home/${terminalUser}`,
-    PATH: `/config/bin:/home/${terminalUser}/.local/bin:/app/node_modules/.bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin`,
+    PATH: `/config/bin:/config/tools/npm/bin:/home/${terminalUser}/.local/bin:/app/node_modules/.bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin`,
   };
   if (process.platform === 'win32' || process.getuid?.() !== 0) return { env };
   try {
@@ -27,7 +28,7 @@ function terminalUserOptions(): Pick<IPtyForkOptions, 'uid' | 'gid' | 'env'> {
       env,
     };
   } catch {
-    return { env: { ...process.env, TERM: 'xterm-256color' } };
+    return { env };
   }
 }
 
@@ -35,7 +36,7 @@ export function listTerminals(): TerminalInfo[] {
   return [...terminals.values()].map(({ id, name, createdAt, alive }) => ({ id, name, createdAt, alive }));
 }
 
-export function createTerminal(): TerminalInfo {
+export async function createTerminal(): Promise<TerminalInfo> {
   const id = crypto.randomUUID();
   const createdAt = new Date().toISOString();
   const name = `Terminal ${terminals.size + 1}`;
@@ -45,7 +46,7 @@ export function createTerminal(): TerminalInfo {
     cols: 100,
     rows: 30,
     cwd: workspaceDir,
-    ...terminalUserOptions(),
+    ...(await terminalUserOptions()),
   });
   const terminal: Terminal = { id, name, createdAt, alive: true, pty: proc, listeners: new Set(), buffer: [] };
   proc.onData((chunk) => {

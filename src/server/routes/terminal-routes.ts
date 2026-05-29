@@ -3,7 +3,7 @@ import { closeTerminal, createTerminal, getTerminalReplay, listTerminals, resize
 
 export async function registerTerminalRoutes(app: FastifyInstance) {
   app.get('/api/terminals', async () => ({ terminals: listTerminals() }));
-  app.post('/api/terminals', async () => ({ terminal: createTerminal() }));
+  app.post('/api/terminals', async () => ({ terminal: await createTerminal() }));
   app.post('/api/terminals/:terminalId/input', async (request, reply) => {
     const { terminalId } = request.params as { terminalId: string };
     const body = request.body as { input?: string };
