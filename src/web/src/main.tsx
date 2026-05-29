@@ -5,6 +5,7 @@ import { Terminal } from './components/Terminal';
 import { MessageBubble } from './components/ToolEvent';
 import { promptSuggestions, themes } from './constants';
 import { readEvents } from './lib/sse';
+import { newId } from './lib/id';
 import { formatRelativeTime } from './lib/time';
 import type { ChatMessage, EnvEntry, HarborEventLog, HarborSession, ModelOption, PiPackage, Provider, SelectedModel, SystemStatus, Tab, TelegramConfig, TerminalInfo, Theme } from './types';
 import './styles.css';
@@ -136,7 +137,7 @@ function Chat({ token, sessionId, sessions, onSessionActivity, onArchiveSession,
   async function loadMessages() {
     const res = await fetch(`/api/sessions/${sessionId}/messages`, { headers: { Authorization: `Bearer ${token}` } });
     if (!res.ok) {
-      setMessages([{ id: crypto.randomUUID(), role: 'event', kind: 'error', text: `Failed to load messages (${res.status})` }]);
+      setMessages([{ id: newId(), role: 'event', kind: 'error', text: `Failed to load messages (${res.status})` }]);
       return;
     }
     const data = await res.json();
@@ -149,7 +150,7 @@ function Chat({ token, sessionId, sessions, onSessionActivity, onArchiveSession,
     setMessages((old) => {
       const last = old.at(-1);
       if (last?.role === 'assistant') return [...old.slice(0, -1), { ...last, text: last.text + text }];
-      return [...old, { id: crypto.randomUUID(), role: 'assistant', text }];
+      return [...old, { id: newId(), role: 'assistant', text }];
     });
   }
 
@@ -159,16 +160,16 @@ function Chat({ token, sessionId, sessions, onSessionActivity, onArchiveSession,
     if (!message || busy) return;
     setDraft('');
     setBusy(true);
-    addMessage({ id: crypto.randomUUID(), role: 'user', text: message });
+    addMessage({ id: newId(), role: 'user', text: message });
     const res = await fetch('/api/chat-json', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ message, sessionId }) });
     const data = await res.json();
     for (const event of data.events ?? []) {
       if (event.type === 'assistant_delta') appendAssistant(event.text);
-      if (event.type === 'tool_event') addMessage({ id: crypto.randomUUID(), role: 'event', kind: 'tool', text: event.text.trim() });
-      if (event.type === 'status') addMessage({ id: crypto.randomUUID(), role: 'event', kind: 'status', text: event.text });
-      if (event.type === 'error') addMessage({ id: crypto.randomUUID(), role: 'event', kind: 'error', text: event.message });
+      if (event.type === 'tool_event') addMessage({ id: newId(), role: 'event', kind: 'tool', text: event.text.trim() });
+      if (event.type === 'status') addMessage({ id: newId(), role: 'event', kind: 'status', text: event.text });
+      if (event.type === 'error') addMessage({ id: newId(), role: 'event', kind: 'error', text: event.message });
     }
-    if (!res.ok) addMessage({ id: crypto.randomUUID(), role: 'event', kind: 'error', text: data.error ?? `Request failed (${res.status})` });
+    if (!res.ok) addMessage({ id: newId(), role: 'event', kind: 'error', text: data.error ?? `Request failed (${res.status})` });
     setBusy(false);
     onSessionActivity();
   }
