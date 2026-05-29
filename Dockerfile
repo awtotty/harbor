@@ -4,6 +4,7 @@ RUN apt-get update \
   && apt-get install -y --no-install-recommends sudo git gh ca-certificates sqlite3 curl jq python3 make g++ ripgrep fd-find less vim-tiny nano unzip zip rsync procps htop dnsutils iputils-ping netcat-openbsd tree tmux \
   && rm -rf /var/lib/apt/lists/* \
   && ln -sf /usr/bin/fdfind /usr/local/bin/fd \
+  && ln -sf /usr/bin/vi /usr/local/bin/vim \
   && mkdir -p /workspace /config \
   && useradd -m -s /bin/bash -G sudo agent \
   && echo 'agent ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/harbor-agent \
