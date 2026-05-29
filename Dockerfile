@@ -11,6 +11,10 @@ RUN apt-get update \
   && chmod 0440 /etc/sudoers.d/harbor-agent \
   && chown -R agent:agent /workspace /config /home/agent
 
+ARG HARBOR_VERSION=dev
+ARG HARBOR_COMMIT=unknown
+ARG HARBOR_BUILT_AT=unknown
+
 WORKDIR /app
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN corepack enable && pnpm install --frozen-lockfile
@@ -22,6 +26,9 @@ RUN pnpm run build \
 
 ENV PATH="/config/bin:/home/agent/.local/bin:/app/node_modules/.bin:${PATH}" \
     HARBOR_PORT=8080 \
+    HARBOR_VERSION=${HARBOR_VERSION} \
+    HARBOR_COMMIT=${HARBOR_COMMIT} \
+    HARBOR_BUILT_AT=${HARBOR_BUILT_AT} \
     HARBOR_CONFIG_DIR=/config \
     HARBOR_WORKSPACE_DIR=/workspace \
     HARBOR_TERMINAL_USER=agent \

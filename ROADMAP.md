@@ -107,7 +107,7 @@ Turn the dogfood prototype into a self-hosted tool another technical individual 
 - Better logging and diagnostics
 - Update distribution and lifecycle:
   - publish versioned Docker images, e.g. `ghcr.io/awtotty/harbor:latest` and semver tags
-  - document manual update flow: `docker compose pull && docker compose up -d`
+  - document manual source-checkout update flow
   - show current/latest version in System UI
   - support optional user-triggered updates through a small privileged updater sidecar rather than giving the main Harbor container direct Docker control
   - consider Watchtower-compatible labels/config for users who want scheduled auto-updates or update notifications

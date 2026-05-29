@@ -1,5 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { listEvents, listSystemStatus, recordEvent, setSystemStatus } from '../db.js';
+import { currentVersion, getUpdateStatus } from '../updates.js';
 
 export async function registerObservabilityRoutes(app: FastifyInstance) {
   app.get('/api/observability/events', async (request) => {
@@ -9,7 +10,9 @@ export async function registerObservabilityRoutes(app: FastifyInstance) {
 
   app.get('/api/observability/status', async () => ({ systems: listSystemStatus() }));
 
-  app.get('/healthz', async () => ({ ok: true }));
+  app.get('/api/updates/status', async () => getUpdateStatus());
+
+  app.get('/healthz', async () => ({ ok: true, version: currentVersion() }));
 }
 
 export function recordStartupStatus() {

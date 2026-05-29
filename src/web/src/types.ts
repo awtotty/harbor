@@ -10,5 +10,7 @@ export type ChatMessage = { id: string; role: 'user' | 'assistant' | 'event'; te
 export type HarborSession = { id: string; name: string; createdAt: string; updatedAt: string; linkedChannels?: Array<{ channel: string; identity: string }> };
 export type TerminalInfo = { id: string; name: string; createdAt: string; alive: boolean };
 export type TelegramConfig = { enabled?: boolean; configured?: boolean; allowedUsers?: string[]; recentSenders?: Array<{ id: string; name: string; lastSeenAt: string }>; botInfo?: { id: string; username?: string; firstName?: string } };
+export type HarborVersion = { version: string; commit: string; builtAt: string };
+export type UpdateStatus = { current: HarborVersion; latest?: { tag: string; url: string; publishedAt?: string }; available: boolean; updaterConfigured: boolean; updaterUrl?: string; error?: string; message?: string };
 export type SystemStatus = { key: string; status: 'ok' | 'degraded' | 'error' | 'disabled'; summary: string; updatedAt: string; lastOkAt?: string | null; lastErrorAt?: string | null; metadata?: unknown };
 export type HarborEventLog = { id: string; createdAt: string; source: string; level: 'debug' | 'info' | 'warn' | 'error'; type: string; title: string; message?: string | null; sessionId?: string | null; metadata?: unknown };

@@ -109,14 +109,14 @@ Leave `HARBOR_DEV_BIND_HOST=127.0.0.1` for local-only access, or set it to the h
 
 ## Updating
 
-Typical update flow:
+Typical source-checkout update flow:
 
 ```bash
-git pull
+git pull --ff-only
 docker compose up --build -d
 ```
 
-The image rebuilds, while `/workspace`, `/config`, and `/home/agent` persist.
+The image rebuilds, while `/workspace`, `/config`, and `/home/agent` persist. See [UPDATES.md](UPDATES.md) for the longer-term external updater design that will allow web/chat-triggered updates without giving the main Harbor container Docker access.
 
 ## Inspecting logs and health
 

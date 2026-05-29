@@ -1,8 +1,9 @@
 import type { FastifyInstance } from 'fastify';
 import { readEnvEntries, writeEnvEntries, configDir, workspaceDir, piAgentDir } from '../config.js';
+import { currentVersion } from '../updates.js';
 
 export async function registerConfigRoutes(app: FastifyInstance) {
-  app.get('/api/status', async () => ({ ok: true, name: 'Harbor', configDir, workspaceDir, piAgentDir, piSessionDir: `${configDir}/sessions` }));
+  app.get('/api/status', async () => ({ ok: true, name: 'Harbor', version: currentVersion(), configDir, workspaceDir, piAgentDir, piSessionDir: `${configDir}/sessions` }));
 
   app.get('/api/env', async () => ({ entries: await readEnvEntries() }));
   app.post('/api/env', async (request) => {

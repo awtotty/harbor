@@ -7,7 +7,7 @@ import { newId } from './lib/id';
 import { formatClockTime, formatRelativeTime } from './lib/time';
 import { useSessions } from './lib/useSessions';
 import { useChatMessages } from './lib/useChatMessages';
-import type { CapabilityBundle, ChatMessage, EnvEntry, HarborEventLog, HarborSession, ModelOption, PiPackage, Provider, SelectedModel, SystemStatus, Tab, TelegramConfig, TerminalInfo, Theme } from './types';
+import type { CapabilityBundle, ChatMessage, EnvEntry, HarborEventLog, HarborSession, ModelOption, PiPackage, Provider, SelectedModel, SystemStatus, Tab, TelegramConfig, TerminalInfo, Theme, UpdateStatus } from './types';
 import './styles.css';
 
 const Terminal = lazy(() => import('./components/Terminal').then((module) => ({ default: module.Terminal })));
@@ -338,19 +338,29 @@ function System({ token }: { token: string }) {
   const [status, setStatus] = useState<unknown>();
   const [systems, setSystems] = useState<SystemStatus[]>([]);
   const [events, setEvents] = useState<HarborEventLog[]>([]);
+  const [updates, setUpdates] = useState<UpdateStatus>();
   async function load() {
     const headers = { Authorization: `Bearer ${token}` };
-    const [statusRes, systemsRes, eventsRes] = await Promise.all([
+    const [statusRes, systemsRes, eventsRes, updatesRes] = await Promise.all([
       fetch('/api/status', { headers }),
       fetch('/api/observability/status', { headers }),
       fetch('/api/observability/events?limit=80', { headers }),
+      fetch('/api/updates/status', { headers }),
     ]);
     if (statusRes.ok) setStatus(await statusRes.json());
     if (systemsRes.ok) setSystems((await systemsRes.json()).systems ?? []);
     if (eventsRes.ok) setEvents((await eventsRes.json()).events ?? []);
+    if (updatesRes.ok) setUpdates(await updatesRes.json());
   }
   useEffect(() => { void load(); }, [token]);
-  return <section className="settingsScreen"><div className="screenHeader"><h2>System</h2><p>Container paths, runtime status, recent events, and operational details.</p><button onClick={load}>Refresh</button></div><div className="statusGrid">{systems.map((system) => <div className={`statusCard ${system.status}`} key={system.key}><strong>{system.key}</strong><span>{system.status}</span><p>{system.summary}</p><small>{formatRelativeTime(system.updatedAt)}</small></div>)}</div><div className="card"><div className="cardHeader"><div><h3>Recent events</h3><p>Structured Harbor events visible to the web UI and agent.</p></div></div><div className="eventTable">{events.map((event) => <div className={`eventRow ${event.level}`} key={event.id}><span>{formatRelativeTime(event.createdAt)}</span><code>{event.source}</code><strong>{event.title}</strong><small>{event.message ?? event.type}</small></div>)}</div></div><div className="card"><pre>{JSON.stringify(status, null, 2)}</pre></div></section>;
+  return <section className="settingsScreen"><div className="screenHeader"><h2>System</h2><p>Container paths, runtime status, recent events, and operational details.</p><button onClick={load}>Refresh</button></div>{updates && <UpdateCard updates={updates} />}<div className="statusGrid">{systems.map((system) => <div className={`statusCard ${system.status}`} key={system.key}><strong>{system.key}</strong><span>{system.status}</span><p>{system.summary}</p><small>{formatRelativeTime(system.updatedAt)}</small></div>)}</div><div className="card"><div className="cardHeader"><div><h3>Recent events</h3><p>Structured Harbor events visible to the web UI and agent.</p></div></div><div className="eventTable">{events.map((event) => <div className={`eventRow ${event.level}`} key={event.id}><span>{formatRelativeTime(event.createdAt)}</span><code>{event.source}</code><strong>{event.title}</strong><small>{event.message ?? event.type}</small></div>)}</div></div><div className="card"><pre>{JSON.stringify(status, null, 2)}</pre></div></section>;
+}
+
+function UpdateCard({ updates }: { updates: UpdateStatus }) {
+  const currentVersion = updates.current.version === 'dev' ? 'Development build' : updates.current.version;
+  const currentCommit = updates.current.commit === 'unknown' ? 'Commit metadata not set' : updates.current.commit;
+  const builtAt = updates.current.builtAt === 'unknown' ? 'Build time metadata not set' : `Built ${updates.current.builtAt}`;
+  return <div className="card"><div className="cardHeader"><div><h3>Version & updates</h3><p>Harbor can check GitHub releases now; update execution will be handled by an external updater.</p></div><span className={updates.available ? 'badge working' : 'badge'}>{updates.available ? 'Update available' : 'Current'}</span></div><div className="statusGrid"><div className="statusCard ok"><strong>Current</strong><span>{currentVersion}</span><p>{currentCommit}</p><small>{builtAt}</small></div><div className={`statusCard ${updates.latest ? 'ok' : 'degraded'}`}><strong>Latest release</strong><span>{updates.latest?.tag ?? 'Not published yet'}</span><p>{updates.latest ? <a href={updates.latest.url} target="_blank" rel="noreferrer">View release</a> : updates.message ?? 'No release data available'}</p><small>{updates.latest?.publishedAt ? formatRelativeTime(updates.latest.publishedAt) : 'GitHub Releases'}</small></div><div className={`statusCard ${updates.updaterConfigured ? 'ok' : 'disabled'}`}><strong>External updater</strong><span>{updates.updaterConfigured ? 'configured' : 'not configured'}</span><p>{updates.updaterConfigured ? updates.updaterUrl : 'Planned: host-side updater service/sidecar. Harbor itself does not get Docker access.'}</p><small>See docs/UPDATES.md</small></div></div></div>;
 }
 
 createRoot(document.getElementById('root')!).render(<App />);
