@@ -1,6 +1,11 @@
 services:
   harbor:
-    build: .
+    build:
+      context: .
+      args:
+        HARBOR_VERSION: ${HARBOR_VERSION:-dev}
+        HARBOR_COMMIT: ${HARBOR_COMMIT:-unknown}
+        HARBOR_BUILT_AT: ${HARBOR_BUILT_AT:-unknown}
     restart: unless-stopped
     ports:
       - "${HARBOR_BIND_HOST:-127.0.0.1}:${HARBOR_PORT:-8080}:8080"

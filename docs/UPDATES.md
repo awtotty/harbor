@@ -2,11 +2,11 @@
 
 Harbor's update path should make a self-hosted appliance easy to keep current without giving the main web app direct control over Docker or the host.
 
-For now Harbor prefers a source-checkout deployment: the host has a Git checkout of this repository, and Docker Compose builds the Harbor image from that checkout. Release tags in GitHub are the stable update targets.
+For now Harbor prefers a source-checkout deployment: the host has a Git checkout of this repository, and Docker Compose builds the Harbor image from that checkout. Git tags in GitHub are the stable update targets.
 
 ## Goals
 
-- Let the user see the current Harbor version and latest GitHub release from the System page.
+- Let the user see the current Harbor version and latest GitHub tag from the System page.
 - Let the user eventually trigger an update from the web UI or a shared Harbor command such as `/update`.
 - Keep Docker/Compose privileges out of the main Harbor container.
 - Back up persistent state before updating.
@@ -23,17 +23,19 @@ Update execution belongs in an external updater:
 
 That updater is privileged by design. It should expose only fixed operations like status/check/update/rollback, require a shared token, validate targets, and never accept arbitrary shell commands from Harbor.
 
-## Current manual source update
+## Current source update scripts
 
-From the Harbor deployment checkout on the host:
+Harbor includes host-run scripts for source-checkout deployments:
 
 ```bash
-git fetch --tags origin
-git checkout <release-tag>
-docker compose up --build -d
+scripts/harbor-export.sh -o backups/harbor.tgz
+scripts/harbor-import.sh backups/harbor.tgz --yes
+scripts/harbor-update.sh --target v0.1.0
 ```
 
-For dogfooding against `main`:
+`harbor-update.sh` fetches Git tags, checks out the requested release tag, rebuilds Harbor with version metadata, restarts Docker Compose, and waits for `/healthz`. By default it creates a pre-update backup first.
+
+For dogfooding against `main`, you can still use the manual flow:
 
 ```bash
 git pull --ff-only
@@ -67,7 +69,7 @@ docker compose build \
   --build-arg HARBOR_BUILT_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 ```
 
-Harbor exposes current metadata and latest GitHub release status through:
+Harbor exposes current metadata and latest GitHub tag status through:
 
 ```text
 GET /api/updates/status
@@ -80,7 +82,7 @@ and displays it on the System page.
 After the external updater exists, the intended flow is:
 
 1. User opens System page or sends `/update`.
-2. Harbor shows current version, latest release tag, and whether an updater is configured.
+2. Harbor shows current version, latest tag, and whether an updater is configured.
 3. User confirms an update.
 4. Harbor sends a fixed update request to the external updater.
 5. The updater:

@@ -4,15 +4,15 @@ export type HarborVersion = {
   builtAt: string;
 };
 
-export type LatestRelease = {
+export type LatestTag = {
   tag: string;
   url: string;
-  publishedAt?: string;
+  commit?: string;
 };
 
 export type UpdateStatus = {
   current: HarborVersion;
-  latest?: LatestRelease;
+  latest?: LatestTag;
   available: boolean;
   updaterConfigured: boolean;
   updaterUrl?: string;
@@ -20,7 +20,7 @@ export type UpdateStatus = {
   message?: string;
 };
 
-const latestReleaseUrl = 'https://api.github.com/repos/awtotty/harbor/releases/latest';
+const tagsUrl = 'https://api.github.com/repos/awtotty/harbor/tags?per_page=100';
 
 export function currentVersion(): HarborVersion {
   return {
@@ -34,7 +34,7 @@ export async function getUpdateStatus(): Promise<UpdateStatus> {
   const current = currentVersion();
   const updaterUrl = process.env.HARBOR_UPDATER_URL;
   try {
-    const latest = await fetchLatestRelease();
+    const latest = await fetchLatestTag();
     return {
       current,
       latest,
@@ -43,7 +43,7 @@ export async function getUpdateStatus(): Promise<UpdateStatus> {
       updaterUrl: updaterUrl ? redactUrl(updaterUrl) : undefined,
     };
   } catch (error) {
-    const message = error instanceof LatestReleaseNotFoundError ? 'No GitHub release has been published yet.' : 'Could not check the latest GitHub release.';
+    const message = error instanceof LatestTagNotFoundError ? 'No v* release tag has been published yet.' : 'Could not check the latest GitHub tag.';
     return {
       current,
       available: false,
@@ -55,32 +55,36 @@ export async function getUpdateStatus(): Promise<UpdateStatus> {
   }
 }
 
-async function fetchLatestRelease(): Promise<LatestRelease> {
+async function fetchLatestTag(): Promise<LatestTag> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 5_000);
   try {
-    const response = await fetch(latestReleaseUrl, {
+    const response = await fetch(tagsUrl, {
       headers: { Accept: 'application/vnd.github+json', 'User-Agent': 'harbor-update-check' },
       signal: controller.signal,
     });
-    if (response.status === 404) throw new LatestReleaseNotFoundError();
-    if (!response.ok) throw new Error(`GitHub latest release check failed: ${response.status}`);
-    const data = await response.json() as { tag_name?: string; html_url?: string; published_at?: string };
-    if (!data.tag_name || !data.html_url) throw new Error('GitHub latest release response was missing tag data');
-    return { tag: data.tag_name, url: data.html_url, publishedAt: data.published_at };
+    if (!response.ok) throw new Error(`GitHub tag check failed: ${response.status}`);
+    const data = await response.json() as Array<{ name?: string; commit?: { sha?: string; url?: string } }>;
+    const tag = data.filter((candidate) => candidate.name?.startsWith('v')).sort((a, b) => compareTags(b.name ?? '', a.name ?? ''))[0];
+    if (!tag?.name) throw new LatestTagNotFoundError();
+    return { tag: tag.name, url: `https://github.com/awtotty/harbor/releases/tag/${tag.name}`, commit: tag.commit?.sha?.slice(0, 7) };
   } finally {
     clearTimeout(timeout);
   }
 }
 
-class LatestReleaseNotFoundError extends Error {
+class LatestTagNotFoundError extends Error {
   constructor() {
-    super('No GitHub release has been published yet.');
+    super('No v* release tag has been published yet.');
   }
 }
 
 function isUpdateAvailable(current: string, latest: string): boolean {
   return current !== 'dev' && current !== 'unknown' && current !== latest;
+}
+
+function compareTags(left: string, right: string): number {
+  return left.localeCompare(right, undefined, { numeric: true, sensitivity: 'base' });
 }
 
 function redactUrl(value: string): string {

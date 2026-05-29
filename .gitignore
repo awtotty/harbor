@@ -2,6 +2,7 @@ node_modules/
 dist/
 .config/
 workspace/
+backups/
 .env
 *.log
 .DS_Store
