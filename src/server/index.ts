@@ -2,6 +2,7 @@ import Fastify from 'fastify';
 import fastifyStatic from '@fastify/static';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createAuthSession, canAttemptLogin, isAuthed, recordLoginFailure, recordLoginSuccess, revokeAuthSession, verifyPassword } from './auth.js';
 import { ensureConfigDir } from './config.js';
 import { MessageRouter } from './router.js';
 import { ensureDefaultPackages } from './packages.js';
@@ -29,20 +30,27 @@ if (password === 'harbor') {
   app.log.warn('Using default HARBOR_PASSWORD=harbor. Set HARBOR_PASSWORD before exposing Harbor beyond localhost.');
 }
 
-function isAuthed(auth?: string): boolean {
-  if (!auth?.startsWith('Bearer ')) return false;
-  return auth.slice('Bearer '.length) === password;
-}
-
 app.addHook('preHandler', async (request, reply) => {
-  if (request.url === '/healthz' || request.url.startsWith('/api/login') || !request.url.startsWith('/api/')) return;
+  const pathname = request.url.split('?')[0];
+  if (pathname === '/healthz' || pathname === '/api/login' || !pathname.startsWith('/api/')) return;
   if (!isAuthed(request.headers.authorization)) return reply.code(401).send({ error: 'Unauthorized' });
 });
 
 app.post('/api/login', async (request, reply) => {
+  const loginKey = request.ip;
+  if (!canAttemptLogin(loginKey)) return reply.code(429).send({ error: 'Too many login attempts' });
   const body = request.body as { password?: string };
-  if (body.password !== password) return reply.code(401).send({ error: 'Invalid password' });
-  return { token: password };
+  if (!verifyPassword(body.password, password)) {
+    recordLoginFailure(loginKey);
+    return reply.code(401).send({ error: 'Invalid password' });
+  }
+  recordLoginSuccess(loginKey);
+  return createAuthSession();
+});
+
+app.post('/api/logout', async (request) => {
+  revokeAuthSession(request.headers.authorization);
+  return { ok: true };
 });
 
 await ensureConfigDir();
