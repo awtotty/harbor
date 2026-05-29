@@ -22,13 +22,14 @@ export async function registerPackageRoutes(app: FastifyInstance, context: Route
 }
 
 async function streamPackageCommand(reply: FastifyReply, args: string[], context: RouteContext) {
-  const emit = openSse(reply);
+  const stream = openSse(reply);
   try {
-    await runPiPackageCommand(args, (event) => emit('event', event));
+    await runPiPackageCommand(args, (event) => stream.emit('event', event));
     context.router.resetSessions();
   } catch (error) {
-    emit('event', { type: 'error', message: error instanceof Error ? error.message : String(error) });
+    stream.emit('event', { type: 'error', message: error instanceof Error ? error.message : String(error) });
   } finally {
-    reply.raw.end();
+    stream.emit('done', {});
+    stream.close();
   }
 }

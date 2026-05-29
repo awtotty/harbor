@@ -16,14 +16,15 @@ export async function registerProviderRoutes(app: FastifyInstance, context: Rout
   app.post('/api/providers/:providerId/login', async (request, reply) => {
     const { providerId } = request.params as { providerId: string };
     const loginId = crypto.randomUUID();
-    const emit = openSse(reply);
+    const stream = openSse(reply);
     try {
-      await loginProvider(providerId, (event) => emit('event', event), loginId);
+      await loginProvider(providerId, (event) => stream.emit('event', event), loginId);
       context.router.resetSessions();
     } catch (error) {
-      emit('event', { type: 'error', message: error instanceof Error ? error.message : String(error) });
+      stream.emit('event', { type: 'error', message: error instanceof Error ? error.message : String(error) });
     } finally {
-      reply.raw.end();
+      stream.emit('done', {});
+      stream.close();
     }
   });
 

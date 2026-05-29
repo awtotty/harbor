@@ -9,7 +9,7 @@ export async function registerChatRoutes(app: FastifyInstance, context: RouteCon
     const message = body.message?.trim();
     if (!message) return reply.code(400).send({ error: 'Missing message' });
 
-    const emit = openSse(reply);
+    const stream = openSse(reply);
     try {
       await sendChatMessage({
         router: context.router,
@@ -17,12 +17,13 @@ export async function registerChatRoutes(app: FastifyInstance, context: RouteCon
         channel: 'web',
         senderId: 'local-web-user',
         text: message,
-        sink: (event) => emit('event', event),
+        sink: (event) => stream.emit('event', event),
       });
     } catch (error) {
-      emit('event', { type: 'error', message: error instanceof Error ? error.message : String(error) });
+      stream.emit('event', { type: 'error', message: error instanceof Error ? error.message : String(error) });
     } finally {
-      reply.raw.end();
+      stream.emit('done', {});
+      stream.close();
     }
   });
 }
