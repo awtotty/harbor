@@ -95,6 +95,8 @@ The web terminal starts in `/workspace`. `PATH` includes:
 
 The Docker image installs `/usr/local/bin/pi` as a wrapper around the bundled Pi CLI, so `pi` is available in web terminals.
 
+Harbor can optionally install capability bundles through Config → Packages & bundles. Bundles install persistent tools under `/config/tools`, link user-facing commands into `/config/bin`, and can write env vars to `/config/harbor.env`.
+
 Use the web terminal for shell access inside Harbor, or use host/infrastructure access for out-of-band administration.
 
 Compose publishes container ports `3000-3099` for dev servers started by the agent:

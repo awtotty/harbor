@@ -17,6 +17,7 @@ async function piEnv() {
   return {
     ...process.env,
     ...(await loadEnvFromFile()),
+    PATH: `${configDir}/bin:${configDir}/tools/npm/bin:${process.env.PATH ?? ''}`,
     PI_CODING_AGENT_DIR: piAgentDir,
     PI_CODING_AGENT_SESSION_DIR: `${configDir}/sessions`,
   };

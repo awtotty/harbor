@@ -37,6 +37,7 @@ Harbor is not a hardened multi-tenant sandbox. Treat anyone with access to the w
 - Real web terminals backed by PTY/xterm
 - `pi` CLI available inside the container terminal as the `agent` user
 - Pi package management with default packages for web access, subagents, processes, and context-mode
+- Optional capability bundles for extra persistent CLIs and Pi package sets
 - Model provider auth and model selection
 - Environment editor writing `/config/harbor.env`
 - System status and structured observability events
@@ -147,6 +148,12 @@ Harbor supports a Telegram bot channel for remote messaging:
 6. Enable the bot.
 
 Telegram-linked sessions are tracked through channel metadata and shown as tags in the web sidebar. Session names are not used as channel source-of-truth.
+
+## Capability bundles
+
+Harbor supports optional capability bundles for extra persistent tools and Pi package sets without bloating the base Docker image. Bundles can install npm CLIs into `/config/tools`, link commands into `/config/bin`, create config directories, write environment variables, and install Pi packages.
+
+Install bundles from Config → Packages & bundles. See `docs/BUNDLES.md` for how optional capability bundles are defined.
 
 ## Terminal
 
