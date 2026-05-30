@@ -24,7 +24,7 @@ The core appliance loop is implemented:
 - source-tag update flow
 - System UI and `/update` command backed by an external updater sidecar
 
-The remaining roadmap is now focused on ongoing polish, useful default bundles, and secure app hosting from Harbor instances.
+The remaining roadmap is now focused on ongoing polish, useful default bundles, files UX, and private dev preview polish.
 
 ## Completed: Personal Appliance
 
@@ -104,10 +104,8 @@ Keep the default image slim while making common toolsets easy to add from Config
 Near-term bundle ideas:
 
 - Developer bundle:
-  - `lazygit`
   - `neovim`/`nvim`
   - language servers or formatters where appropriate
-  - common shell/dev utilities that are useful but not required in the base image
 - Cloud/devops bundle examples
 - Project-specific bundle examples
 - Better bundle status detection and uninstall behavior
@@ -116,38 +114,13 @@ Near-term bundle ideas:
 
 ## Delivered: Private Dev Server Proxy
 
-Harbor can route Harbor-authenticated paths like `/proxy/:port/` to container-local dev servers. This makes Harbor useful as a private remote dev workspace without publishing a broad Docker dev-port range to the host.
+Harbor can route Harbor-authenticated paths like `/proxy/:port/` to runtime-local dev servers. This makes Harbor useful as a private remote dev workspace without publishing a broad Docker dev-port range to the host.
 
-The current proxy is intentionally path-based same-origin trusted preview mode. It is useful for private development, but it is not browser isolation for untrusted apps and it is not public app hosting.
+The proxy supports normal private dev-server previews, including root paths such as `/proxy/3000` and nested paths such as `/proxy/3000/...`. It is intentionally path-based same-origin trusted preview mode: useful for private development, but not browser isolation for untrusted apps and not public app hosting.
 
-Follow-up polish:
+Remaining polish:
 
 - improve WebSocket/HMR compatibility where practical
 - make generated apps easy to open from chat, terminal, and System/UI affordances
 - add clearer framework examples for base path configuration
-- consider origin-isolated preview architecture only if Harbor later needs to run untrusted or semi-trusted browser apps
-
-Public app hosting is intentionally out of scope for Harbor's appliance runtime. If Harbor later offers public publishing for blogs, shops, or apps, that should use a separate deployment architecture with appropriate isolation and exposure controls, even if the product experience feels unified.
-
-## Future: Hosted Utility Version
-
-Offer Harbor as a managed service while preserving the open-source self-hosted core.
-
-Possible future work:
-
-- Managed hosted personal instances
-- Persistent storage and backups
-- Remote access without manual server setup
-- Hosted model routing
-- Messaging channel management
-- Usage dashboard
-- Utility-style metered billing
-- Data export and migration path back to self-hosting
-
-Users should be able to self-host Harbor for free or pay for managed convenience, uptime, and compute.
-
-## Deferred / Reconsider Later
-
-### Signal
-
-Signal linked-device mode works poorly for the desired use case because a linked device is not a separate recipient the same user can message. A dedicated Signal bot-like account requires another phone number. Keep Signal deferred unless there is a clear user need and acceptable setup story.
+- keep public app hosting out of Harbor's appliance runtime unless it is implemented through a separate, properly isolated deployment architecture
