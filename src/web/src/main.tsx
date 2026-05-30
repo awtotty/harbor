@@ -147,6 +147,7 @@ function SessionTags({ session }: { session: HarborSession }) {
 
 function Chat({ sessionId, activeSessionUpdatedAt, sessions, onSessionActivity, onSwitchSession, onArchiveSession, canArchive }: { sessionId: string; activeSessionUpdatedAt?: string; sessions: HarborSession[]; onSessionActivity: () => void | Promise<unknown>; onSwitchSession: (sessionId: string) => void; onArchiveSession: () => void | Promise<void>; canArchive: boolean }) {
   const [suggestion, setSuggestion] = useState<{ id: string; text: string }>();
+  const handleSuggestion = useCallback((text: string) => setSuggestion({ id: newId(), text }), []);
   const { messages, busy, loadingOlder, hasOlder, loadOlder, addMessage, appendAssistant, beginSend, finishSend } = useChatMessages({ sessionId, activeSessionUpdatedAt });
 
   const sendMessage = useCallback(async (message: string) => {
@@ -190,7 +191,7 @@ function Chat({ sessionId, activeSessionUpdatedAt, sessions, onSessionActivity, 
   }, [addMessage, appendAssistant, beginSend, busy, finishSend, onSessionActivity, onSwitchSession, sessionId]);
 
   const activeSession = sessions.find((session) => session.id === sessionId);
-  return <section className="chatScreen"><div className="chatHeader"><div><h2>{activeSession?.name ?? 'Session'}</h2><p><code>/workspace</code> · <span>{sessionId}</span></p></div><div className="chatActions"><button className="ghost" onClick={onArchiveSession} disabled={busy || !canArchive}>Archive</button></div></div><ChatMessageList messages={messages} hasOlder={hasOlder} loadingOlder={loadingOlder} onLoadOlder={loadOlder} onSuggestion={(text) => setSuggestion({ id: newId(), text })} /><ChatComposer busy={busy} suggestion={suggestion} onSend={sendMessage} /></section>;
+  return <section className="chatScreen"><div className="chatHeader"><div><h2>{activeSession?.name ?? 'Session'}</h2><p><code>/workspace</code> · <span>{sessionId}</span></p></div><div className="chatActions"><button className="ghost" onClick={onArchiveSession} disabled={busy || !canArchive}>Archive</button></div></div><ChatMessageList messages={messages} hasOlder={hasOlder} loadingOlder={loadingOlder} onLoadOlder={loadOlder} onSuggestion={handleSuggestion} /><ChatComposer busy={busy} suggestion={suggestion} onSend={sendMessage} /></section>;
 }
 
 const ChatMessageList = memo(function ChatMessageList({ messages, hasOlder, loadingOlder, onLoadOlder, onSuggestion }: { messages: ChatMessage[]; hasOlder: boolean; loadingOlder: boolean; onLoadOlder: () => void | Promise<void>; onSuggestion: (text: string) => void }) {

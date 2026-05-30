@@ -1,3 +1,4 @@
+import { memo, useMemo } from 'react';
 import { formatClockTime } from '../lib/time';
 import type { ChatMessage } from '../types';
 
@@ -10,22 +11,25 @@ type ParsedToolEvent = {
   fields: Array<{ label: string; value: string }>;
 };
 
-export function MessageBubble({ message }: { message: ChatMessage }) {
+export const MessageBubble = memo(function MessageBubble({ message }: { message: ChatMessage }) {
   if (message.role === 'event' && message.kind === 'tool') return <ToolEvent text={message.text} />;
   if (message.role === 'event') {
     if (message.kind === 'status') return null;
     return <details className={`event ${message.kind}`}><summary>{message.kind === 'error' ? 'Error' : 'Event'}</summary><pre>{message.text}</pre></details>;
   }
   return <article className={`bubble ${message.role}`}><div className="avatar">{message.role === 'user' ? 'You' : 'Pi'}</div><div className="bubbleText">{message.text}</div><time className="messageTime">{formatClockTime(message.createdAt)}</time></article>;
-}
+});
 
-export function ActivityGroup({ messages }: { messages: ChatMessage[] }) {
-  const parsed = messages.map((message) => parseToolEvent(message.text));
-  const visibleEvents = meaningfulEvents(parsed);
-  const hiddenEvents = parsed.filter((event) => !visibleEvents.includes(event));
-  const summary = summarizeActivity(visibleEvents.length ? visibleEvents : parsed);
+export const ActivityGroup = memo(function ActivityGroup({ messages }: { messages: ChatMessage[] }) {
+  const { parsed, visibleEvents, hiddenEvents, summary } = useMemo(() => {
+    const parsed = messages.map((message) => parseToolEvent(message.text));
+    const visibleEvents = meaningfulEvents(parsed);
+    const hiddenEvents = parsed.filter((event) => !visibleEvents.includes(event));
+    const summary = summarizeActivity(visibleEvents.length ? visibleEvents : parsed);
+    return { parsed, visibleEvents, hiddenEvents, summary };
+  }, [messages]);
   return <details className="activityCard"><summary><span className="toolBadge">Activity</span><span>{summary}</span><small>{visibleEvents.length || parsed.length} item{(visibleEvents.length || parsed.length) === 1 ? '' : 's'}</small></summary><div className="activityList">{visibleEvents.map((event, index) => <ToolEventCard key={`${event.eventType}-${index}-${event.title}`} event={event} compact defaultOpen={visibleEvents.length === 1 && index === 0} />)}{hiddenEvents.length > 0 && <details className="rawEvent"><summary>{hiddenEvents.length} low-level event{hiddenEvents.length === 1 ? '' : 's'}</summary><div className="activityList">{hiddenEvents.map((event, index) => <ToolEventCard key={`${event.eventType}-${index}-${event.title}`} event={event} compact />)}</div></details>}</div></details>;
-}
+});
 
 function ToolEvent({ text, compact = false, defaultOpen = false }: { text: string; compact?: boolean; defaultOpen?: boolean }) {
   return <ToolEventCard event={parseToolEvent(text)} compact={compact} defaultOpen={defaultOpen} />;

@@ -14,17 +14,36 @@ export function Terminal({ terminalId, onClose, onNewTerminal }: { terminalId?: 
     term.open(containerRef.current);
     fitAddon.fit();
     term.focus();
+    let resizeFrame: number | undefined;
+    let lastSize = '';
     const resize = () => {
-      fitAddon.fit();
-      void fetch(`/api/terminals/${terminalId}/resize`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ cols: term.cols, rows: term.rows }) });
+      if (resizeFrame !== undefined) return;
+      resizeFrame = window.requestAnimationFrame(() => {
+        resizeFrame = undefined;
+        fitAddon.fit();
+        const nextSize = `${term.cols}x${term.rows}`;
+        if (nextSize === lastSize) return;
+        lastSize = nextSize;
+        void fetch(`/api/terminals/${terminalId}/resize`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ cols: term.cols, rows: term.rows }) });
+      });
     };
     resize();
     const observer = new ResizeObserver(resize);
     observer.observe(containerRef.current);
     const replaying = { current: false };
+    let inputBuffer = '';
+    let inputTimer: number | undefined;
+    const flushInput = () => {
+      inputTimer = undefined;
+      const input = inputBuffer;
+      inputBuffer = '';
+      if (!input) return;
+      void fetch(`/api/terminals/${terminalId}/input`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ input }) });
+    };
     const dataDisposable = term.onData((input) => {
       if (replaying.current) return;
-      void fetch(`/api/terminals/${terminalId}/input`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ input }) });
+      inputBuffer += input;
+      if (inputTimer === undefined) inputTimer = window.setTimeout(flushInput, 12);
     });
     const controller = new AbortController();
     fetch(`/api/terminals/${terminalId}/stream`, { signal: controller.signal }).then(async (res) => {
@@ -53,7 +72,7 @@ export function Terminal({ terminalId, onClose, onNewTerminal }: { terminalId?: 
         }
       }
     }).catch(() => undefined);
-    return () => { controller.abort(); observer.disconnect(); dataDisposable.dispose(); term.dispose(); };
+    return () => { controller.abort(); observer.disconnect(); dataDisposable.dispose(); if (resizeFrame !== undefined) window.cancelAnimationFrame(resizeFrame); if (inputTimer !== undefined) window.clearTimeout(inputTimer); term.dispose(); };
   }, [terminalId]);
 
   if (!terminalId) return <section className="terminalScreen noSessionsScreen"><div className="empty"><h3>No terminal open</h3><p>Create a terminal to get shell access inside Harbor.</p>{onNewTerminal && <button onClick={onNewTerminal}>New terminal</button>}</div></section>;
