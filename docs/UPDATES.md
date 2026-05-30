@@ -59,7 +59,7 @@ For dogfooding against `main`, you can still use the manual flow:
 
 ```bash
 git pull --ff-only
-docker compose --profile updater up --build -d
+docker compose up --build -d
 ```
 
 ## Version metadata
@@ -78,7 +78,7 @@ The setup and update scripts pass those values automatically. For manual builds:
 HARBOR_VERSION="$(git describe --tags --exact-match 2>/dev/null || echo dev)" \
 HARBOR_COMMIT="$(git rev-parse --short HEAD)" \
 HARBOR_BUILT_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-docker compose --profile updater up --build -d
+docker compose up --build -d
 ```
 
 ## APIs
@@ -120,7 +120,7 @@ Rollback is currently manual:
 
 ```bash
 git checkout <previous-release-tag>
-docker compose --profile updater up --build -d
+docker compose up --build -d
 scripts/harbor-import.sh backups/pre-update-...tgz --yes
 ```
 

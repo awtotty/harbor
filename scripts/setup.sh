@@ -146,7 +146,7 @@ start_harbor() {
   export HARBOR_VERSION="$(git describe --tags --exact-match 2>/dev/null || echo dev)"
   export HARBOR_COMMIT="$(git rev-parse --short HEAD 2>/dev/null || echo unknown)"
   export HARBOR_BUILT_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-  docker compose --profile updater up --build -d
+  docker compose up --build -d
 }
 
 main() {
@@ -184,7 +184,7 @@ main() {
   echo "  http://${HARBOR_SETUP_BIND_HOST}:8080"
   echo
   echo "Useful commands:"
-  echo "  docker compose --profile updater logs -f"
+  echo "  docker compose logs -f"
   echo "  scripts/harbor-export.sh -o backups/harbor.tgz"
 }
 
