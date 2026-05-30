@@ -1,6 +1,6 @@
 import { memo, useMemo, useState } from 'react';
-import { formatClockTime } from '../lib/time';
-import type { ChatMessage } from '../types';
+import { formatClockTime } from '../../lib/time';
+import type { ChatMessage } from '../../types';
 
 type ParsedToolEvent = {
   label: string;

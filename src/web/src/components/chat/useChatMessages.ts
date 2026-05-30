@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { ChatMessage } from '../types';
-import { newId } from './id';
+import type { ChatMessage } from '../../types';
+import { newId } from '../../lib/id';
 
-const PAGE_SIZE = 80;
+const PAGE_SIZE = 40;
 
 export function useChatMessages({ sessionId, activeSessionUpdatedAt }: { sessionId: string; activeSessionUpdatedAt?: string }) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -10,6 +10,8 @@ export function useChatMessages({ sessionId, activeSessionUpdatedAt }: { session
   const [loadingOlder, setLoadingOlder] = useState(false);
   const [hasOlder, setHasOlder] = useState(false);
   const activeAssistantMessageId = useRef<string | undefined>(undefined);
+  const assistantDeltaBuffer = useRef('');
+  const assistantFlushTimer = useRef<number | undefined>(undefined);
 
   const normalize = (items: any[]): ChatMessage[] => items.map((m: any) => ({ id: m.id, role: m.role, kind: m.kind, text: m.text, createdAt: m.createdAt }));
 
@@ -49,17 +51,11 @@ export function useChatMessages({ sessionId, activeSessionUpdatedAt }: { session
 
   const addMessage = useCallback((message: ChatMessage) => setMessages((old) => [...old, message]), []);
 
-  const beginSend = useCallback(() => {
-    activeAssistantMessageId.current = undefined;
-    setBusy(true);
-  }, []);
-
-  const finishSend = useCallback(() => {
-    activeAssistantMessageId.current = undefined;
-    setBusy(false);
-  }, []);
-
-  const appendAssistant = useCallback((text: string) => {
+  const flushAssistant = useCallback(() => {
+    assistantFlushTimer.current = undefined;
+    const text = assistantDeltaBuffer.current;
+    assistantDeltaBuffer.current = '';
+    if (!text) return;
     setMessages((old) => {
       const existingId = activeAssistantMessageId.current;
       if (existingId) {
@@ -76,6 +72,26 @@ export function useChatMessages({ sessionId, activeSessionUpdatedAt }: { session
       return [...old, message];
     });
   }, []);
+
+  const beginSend = useCallback(() => {
+    activeAssistantMessageId.current = undefined;
+    assistantDeltaBuffer.current = '';
+    if (assistantFlushTimer.current !== undefined) window.clearTimeout(assistantFlushTimer.current);
+    assistantFlushTimer.current = undefined;
+    setBusy(true);
+  }, []);
+
+  const finishSend = useCallback(() => {
+    if (assistantFlushTimer.current !== undefined) window.clearTimeout(assistantFlushTimer.current);
+    flushAssistant();
+    activeAssistantMessageId.current = undefined;
+    setBusy(false);
+  }, [flushAssistant]);
+
+  const appendAssistant = useCallback((text: string) => {
+    assistantDeltaBuffer.current += text;
+    if (assistantFlushTimer.current === undefined) assistantFlushTimer.current = window.setTimeout(flushAssistant, 50);
+  }, [flushAssistant]);
 
   return { messages, busy, loadingOlder, hasOlder, loadOlder, addMessage, appendAssistant, beginSend, finishSend, loadMessages };
 }
