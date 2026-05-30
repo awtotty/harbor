@@ -12,12 +12,25 @@ Docker Compose mounts these volumes by default:
 
 ## Custom tools
 
-Harbor prepends these paths to `PATH`:
+Harbor prepends these persistent tool paths to `PATH`:
 
 ```text
 /config/bin
+/config/tools/npm/bin
+/config/tools/pnpm
+/config/tools/cargo/bin
+/config/tools/go/bin
 /home/agent/.local/bin
 /app/node_modules/.bin
+```
+
+Terminal sessions also set common tool-install environment variables so default user-level installs land in mounted volumes:
+
+```text
+NPM_CONFIG_PREFIX=/config/tools/npm
+PNPM_HOME=/config/tools/pnpm
+CARGO_HOME=/config/tools/cargo
+GOPATH=/config/tools/go
 ```
 
 Use `/config/bin` for persistent custom scripts or standalone binaries:
@@ -28,7 +41,16 @@ curl -L https://example.com/tool -o /config/bin/tool
 chmod +x /config/bin/tool
 ```
 
-Use `/home/agent/.local/bin` for tools installed by user-level installers.
+Use normal user-level installers when possible:
+
+```bash
+npm install -g typescript
+pnpm add -g some-cli
+cargo install ripgrep
+python3 -m pip install --user some-cli
+```
+
+Those install locations are in `/config` or `/home/agent`, so they survive Harbor image rebuilds and source updates.
 
 ## What does not persist
 
@@ -36,9 +58,10 @@ Changes to the container filesystem outside mounted volumes do not survive rebui
 
 ```bash
 sudo apt-get install gh
+sudo npm install -g some-cli
 ```
 
-inside a running container is temporary. To make apt packages permanent, add them to the Dockerfile or create a derived image.
+inside a running container is temporary because those commands write to the image filesystem. Prefer non-`sudo` user-level installs, `/config/bin`, or Harbor bundles. To make apt packages permanent, add them to the Dockerfile or create a derived image.
 
 ## GitHub CLI example
 
