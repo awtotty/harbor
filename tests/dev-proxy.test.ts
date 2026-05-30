@@ -83,6 +83,18 @@ test('dev proxy requires auth and strips Harbor credentials from upstream reques
 
     assert.equal(ok.statusCode, 200);
     assert.equal(ok.body, 'GET /hello?x=1');
+
+    const root = await app.inject({
+      method: 'GET',
+      url: '/proxy/3123',
+      headers: {
+        host: '127.0.0.1:8080',
+        cookie: `harborToken=${session.token}`,
+      },
+    });
+
+    assert.equal(root.statusCode, 200);
+    assert.equal(root.body, 'GET /');
     assert.equal(upstreamHeaders.authorization, undefined);
     assert.equal(upstreamHeaders.cookie, undefined);
     assert.equal(upstreamHeaders.origin, undefined);

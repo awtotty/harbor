@@ -42,7 +42,7 @@ export function allowedDevProxyPorts(value = process.env.HARBOR_DEV_PROXY_PORTS 
 export async function registerDevProxy(app: FastifyInstance) {
   const allowedPorts = allowedDevProxyPorts();
 
-  app.all('/proxy/:port/*', async (request, reply) => {
+  const handleProxyRequest = async (request: FastifyRequest, reply: FastifyReply) => {
     if (isCrossSiteProxyRequest(request.headers)) {
       return reply.code(403).send({ error: 'Cross-site dev proxy requests are not allowed' });
     }
@@ -53,7 +53,10 @@ export async function registerDevProxy(app: FastifyInstance) {
     if (!allowedPorts.has(port)) return reply.code(404).send({ error: 'Dev proxy port is not allowed' });
     if (isRuntimeConfigured()) return proxyRuntimeRequest(request, reply, `/internal/dev-proxy/${port}${path}`);
     return proxyHttpRequest(request, reply, port, path);
-  });
+  };
+
+  app.all('/proxy/:port', handleProxyRequest);
+  app.all('/proxy/:port/*', handleProxyRequest);
 
   app.server.on('upgrade', (request, socket, head) => {
     const parsed = parseProxyUrl(request.url ?? '');
@@ -79,11 +82,14 @@ export async function registerDevProxy(app: FastifyInstance) {
 export async function registerRuntimeDevProxy(app: FastifyInstance) {
   const allowedPorts = allowedDevProxyPorts();
   const runtimeToken = process.env.HARBOR_RUNTIME_TOKEN ?? '';
-  app.all('/internal/dev-proxy/:port/*', async (request, reply) => {
+  const handleInternalProxyRequest = async (request: FastifyRequest, reply: FastifyReply) => {
     const { port, path } = parseInternalProxyRequest(request);
     if (!allowedPorts.has(port)) return reply.code(404).send({ error: 'Dev proxy port is not allowed' });
     return proxyHttpRequest(request, reply, port, path);
-  });
+  };
+
+  app.all('/internal/dev-proxy/:port', handleInternalProxyRequest);
+  app.all('/internal/dev-proxy/:port/*', handleInternalProxyRequest);
   app.server.on('upgrade', (request, socket, head) => {
     const parsed = parseInternalProxyUrl(request.url ?? '');
     if (!parsed || !allowedPorts.has(parsed.port) || request.headers['x-harbor-runtime-token'] !== runtimeToken) {
