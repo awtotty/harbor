@@ -49,7 +49,7 @@ scripts/harbor-update.sh --target v0.1.0
 4. creates a pre-update backup by default
 5. checks out the target tag detached
 6. rebuilds Harbor with version metadata
-7. stops the old Harbor container to release published ports, including the temporary `3000-3099` dev range
+7. stops the old Harbor container to release the published Harbor web port
 8. starts the updated Harbor container
 9. waits for `/healthz`
 

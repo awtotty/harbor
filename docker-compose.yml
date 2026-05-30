@@ -9,13 +9,13 @@ services:
     restart: unless-stopped
     ports:
       - "${HARBOR_BIND_HOST:-127.0.0.1}:${HARBOR_PORT:-8080}:8080"
-      - "${HARBOR_DEV_BIND_HOST:-127.0.0.1}:3000-3099:3000-3099"
     environment:
       HARBOR_PASSWORD: ${HARBOR_PASSWORD:-harbor}
       HARBOR_PRODUCTION: ${HARBOR_PRODUCTION:-false}
       HARBOR_CONFIG_DIR: /config
       HARBOR_WORKSPACE_DIR: /workspace
       HARBOR_TERMINAL_USER: agent
+      HARBOR_DEV_PROXY_PORTS: ${HARBOR_DEV_PROXY_PORTS:-3000-3099,5173}
       HARBOR_UPDATER_URL: ${HARBOR_UPDATER_URL:-http://harbor-updater:8787}
       HARBOR_UPDATER_TOKEN: ${HARBOR_UPDATER_TOKEN:-}
       PI_CODING_AGENT_DIR: /config/pi-agent

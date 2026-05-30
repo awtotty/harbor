@@ -3,7 +3,7 @@ import { Terminal as XTerm } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import '@xterm/xterm/css/xterm.css';
 
-export function Terminal({ token, terminalId, onClose, onNewTerminal }: { token: string; terminalId?: string; onClose: () => void | Promise<void>; onNewTerminal?: () => void | Promise<void> }) {
+export function Terminal({ terminalId, onClose, onNewTerminal }: { terminalId?: string; onClose: () => void | Promise<void>; onNewTerminal?: () => void | Promise<void> }) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -16,7 +16,7 @@ export function Terminal({ token, terminalId, onClose, onNewTerminal }: { token:
     term.focus();
     const resize = () => {
       fitAddon.fit();
-      void fetch(`/api/terminals/${terminalId}/resize`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ cols: term.cols, rows: term.rows }) });
+      void fetch(`/api/terminals/${terminalId}/resize`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ cols: term.cols, rows: term.rows }) });
     };
     resize();
     const observer = new ResizeObserver(resize);
@@ -24,10 +24,10 @@ export function Terminal({ token, terminalId, onClose, onNewTerminal }: { token:
     const replaying = { current: false };
     const dataDisposable = term.onData((input) => {
       if (replaying.current) return;
-      void fetch(`/api/terminals/${terminalId}/input`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ input }) });
+      void fetch(`/api/terminals/${terminalId}/input`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ input }) });
     });
     const controller = new AbortController();
-    fetch(`/api/terminals/${terminalId}/stream`, { headers: { Authorization: `Bearer ${token}` }, signal: controller.signal }).then(async (res) => {
+    fetch(`/api/terminals/${terminalId}/stream`, { signal: controller.signal }).then(async (res) => {
       const reader = res.body?.getReader();
       if (!reader) return;
       const decoder = new TextDecoder();
@@ -54,7 +54,7 @@ export function Terminal({ token, terminalId, onClose, onNewTerminal }: { token:
       }
     }).catch(() => undefined);
     return () => { controller.abort(); observer.disconnect(); dataDisposable.dispose(); term.dispose(); };
-  }, [terminalId, token]);
+  }, [terminalId]);
 
   if (!terminalId) return <section className="terminalScreen noSessionsScreen"><div className="empty"><h3>No terminal open</h3><p>Create a terminal to get shell access inside Harbor.</p>{onNewTerminal && <button onClick={onNewTerminal}>New terminal</button>}</div></section>;
   return <section className="terminalScreen"><div className="chatHeader"><div><h2>Terminal</h2></div><div className="chatActions"><button className="ghost" onClick={onClose}>Close</button></div></div><div className="terminalFrame"><div className="terminalMount" ref={containerRef} /></div></section>;

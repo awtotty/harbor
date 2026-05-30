@@ -114,19 +114,20 @@ Near-term bundle ideas:
 - Bundle tests and validation helpers
 - Documentation examples for custom installers
 
-## Major Remaining Feature: Secure App Reverse Proxy
+## Delivered: Private Dev Server Proxy
 
-Harbor should let the agent create and run web applications inside the container, then expose them securely through Harbor instead of relying on published dev port ranges.
+Harbor can route Harbor-authenticated paths like `/proxy/:port/` to container-local dev servers. This makes Harbor useful as a private remote dev workspace without publishing a broad Docker dev-port range to the host.
 
-Goal:
+The current proxy is intentionally path-based same-origin trusted preview mode. It is useful for private development, but it is not browser isolation for untrusted apps and it is not public app hosting.
 
-- route Harbor-authenticated paths like `/proxy/:port/` to container-local apps
-- support WebSocket/HMR where practical
-- keep apps private behind Harbor auth/Tailscale
-- reduce or eventually remove reliance on Docker-published `3000-3099`
+Follow-up polish:
+
+- improve WebSocket/HMR compatibility where practical
 - make generated apps easy to open from chat, terminal, and System/UI affordances
+- add clearer framework examples for base path configuration
+- consider origin-isolated preview architecture only if Harbor later needs to run untrusted or semi-trusted browser apps
 
-This is the most important remaining infrastructure feature because it turns Harbor from “agent plus terminal” into a safer remote app workspace.
+Public app hosting is intentionally out of scope for Harbor's appliance runtime. If Harbor later offers public publishing for blogs, shops, or apps, that should use a separate deployment architecture with appropriate isolation and exposure controls, even if the product experience feels unified.
 
 ## Future: Hosted Utility Version
 

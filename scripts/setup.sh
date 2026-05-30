@@ -112,17 +112,6 @@ prompt_bind_host() {
   fi
 }
 
-prompt_dev_bind_host() {
-  echo
-  echo "Agent-started web apps can use ports 3000-3099."
-  echo "Keeping those ports on localhost avoids conflicts and unintended exposure."
-  if confirm "Expose dev ports on the same host as Harbor?" N; then
-    HARBOR_SETUP_DEV_BIND_HOST="$HARBOR_SETUP_BIND_HOST"
-  else
-    HARBOR_SETUP_DEV_BIND_HOST="127.0.0.1"
-  fi
-}
-
 prepare_env_file() {
   if [[ ! -f "$ENV_FILE" ]]; then return; fi
   local backup_file=".env.bak_$(date -u +%Y%m%d-%H%M%S)"
@@ -141,7 +130,7 @@ write_env() {
   upsert_env HARBOR_PRODUCTION true
   upsert_env HARBOR_BIND_HOST "$HARBOR_SETUP_BIND_HOST"
   upsert_env HARBOR_PORT 8080
-  upsert_env HARBOR_DEV_BIND_HOST "$HARBOR_SETUP_DEV_BIND_HOST"
+  upsert_env HARBOR_DEV_PROXY_PORTS "3000-3099,5173"
   upsert_env HARBOR_CONFIG_DIR /config
   upsert_env HARBOR_WORKSPACE_DIR /workspace
   upsert_env HARBOR_TERMINAL_USER agent
@@ -183,7 +172,6 @@ main() {
   prepare_env_file
   prompt_password
   prompt_bind_host
-  prompt_dev_bind_host
   write_env
   start_harbor
 

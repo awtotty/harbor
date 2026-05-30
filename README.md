@@ -84,10 +84,12 @@ HARBOR_PASSWORD=change-me
 HARBOR_PRODUCTION=false
 HARBOR_BIND_HOST=127.0.0.1
 HARBOR_PORT=8080
-HARBOR_DEV_BIND_HOST=127.0.0.1
+HARBOR_DEV_PROXY_PORTS=3000-3099,5173
 ```
 
-Compose publishes container ports `3000-3099` for agent-started dev servers. This is the current dev-server access mechanism. Set `HARBOR_DEV_BIND_HOST` to your Tailscale IP for Tailnet access to those ports. A Harbor-authenticated reverse proxy is planned to reduce reliance on published port ranges.
+Harbor includes a private dev-server proxy for apps started by the agent inside the container. After logging in, open a dev server through Harbor at `/proxy/<port>/`, for example `http://localhost:8080/proxy/5173/`. Proxy targets are limited to `127.0.0.1` inside the container and to `HARBOR_DEV_PROXY_PORTS`.
+
+Compose no longer publishes a broad dev-server port range to the host. Use the authenticated proxy path for private previews.
 
 For private Tailnet access, bind `HARBOR_BIND_HOST` to the host's Tailscale IP or MagicDNS-resolved interface. Avoid exposing Harbor directly to the public internet.
 
@@ -133,6 +135,36 @@ GET  /api/chat/runs/:runId/events
 ```
 
 This keeps chat responsive while using standard GET-based SSE for better behavior over Tailnet and browser/proxy paths.
+
+## Private dev server proxy
+
+Use Harbor as a private dev workspace by starting dev servers from Chat or Terminal, then opening them through Harbor:
+
+```text
+/proxy/3000/
+/proxy/5173/
+```
+
+The proxy is intended only for private previews. It requires Harbor auth, proxies only to container-local `127.0.0.1` ports, strips Harbor credentials before forwarding, and does not provide public app hosting. If public publishing is added in the future, it should use a separate deployment architecture rather than exposing Harbor's appliance runtime.
+
+This is same-origin trusted preview mode: frontend JavaScript served from `/proxy/<port>/` runs on the Harbor browser origin and is not browser-isolated from the Harbor UI/API. Only open dev apps you trust as part of your Harbor workspace.
+
+The Phase 1 proxy is aimed at dev-server previews, HMR, and normal app/static traffic. Multipart uploads, arbitrary binary requests, and streaming request bodies are not guaranteed.
+
+The proxy is path-based. Apps that emit absolute asset or HMR URLs may need their base/public path set to `/proxy/<port>/`. For Vite, configure the app like:
+
+```ts
+import { defineConfig } from 'vite';
+
+export default defineConfig({
+  base: '/proxy/5173/',
+  server: {
+    host: '0.0.0.0',
+    port: 5173,
+    hmr: { path: '/proxy/5173/' },
+  },
+});
+```
 
 ## Harbor commands
 

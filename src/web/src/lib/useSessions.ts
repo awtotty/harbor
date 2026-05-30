@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { HarborSession } from '../types';
 
-export function useSessions(token: string, activeSessionId: string, setActiveSessionId: (id: string) => void) {
+export function useSessions(authed: boolean, activeSessionId: string, setActiveSessionId: (id: string) => void) {
   const [sessions, setSessions] = useState<HarborSession[]>([]);
   const activeSession = useMemo(() => sessions.find((session) => session.id === activeSessionId), [activeSessionId, sessions]);
 
   const loadSessions = useCallback(async (): Promise<HarborSession[]> => {
-    const res = await fetch('/api/sessions', { headers: { Authorization: `Bearer ${token}` } });
+    const res = await fetch('/api/sessions');
     if (!res.ok) {
       if (res.status === 401) {
         localStorage.removeItem('harborToken');
@@ -19,15 +19,15 @@ export function useSessions(token: string, activeSessionId: string, setActiveSes
     setSessions(nextSessions);
     if (!nextSessions.some((session: HarborSession) => session.id === activeSessionId)) setActiveSessionId(nextSessions[0]?.id ?? '');
     return nextSessions;
-  }, [activeSessionId, sessions, setActiveSessionId, token]);
+  }, [activeSessionId, sessions, setActiveSessionId]);
 
-  useEffect(() => { if (token) void loadSessions(); }, [token]);
+  useEffect(() => { if (authed) void loadSessions(); }, [authed]);
 
   useEffect(() => {
-    if (!token) return;
+    if (!authed) return;
     const timer = window.setInterval(() => { void loadSessions(); }, 3000);
     return () => window.clearInterval(timer);
-  }, [loadSessions, token]);
+  }, [authed, loadSessions]);
 
   return { sessions, setSessions, activeSession, activeSessionUpdatedAt: activeSession?.updatedAt, loadSessions };
 }
