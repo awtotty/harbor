@@ -195,25 +195,27 @@ export function appendMessageText(id: string, delta: string): void {
   db.prepare('update messages set text = text || ? where id = ?').run(delta, id);
 }
 
-export function listMessages(sessionId: string, options: { before?: string; limit?: number } = {}): StoredMessage[] {
+type MessageCursor = { createdAt: string; id: string };
+
+export function listMessages(sessionId: string, options: { before?: MessageCursor; limit?: number } = {}): StoredMessage[] {
   ensureSession(sessionId);
   const limit = Math.min(Math.max(options.limit ?? 80, 1), 500);
   return visibleConversationWindow(sessionId, options.before, limit).messages;
 }
 
-export function hasMessagesBefore(sessionId: string, before?: string): boolean {
+export function hasMessagesBefore(sessionId: string, before?: MessageCursor): boolean {
   ensureSession(sessionId);
   if (!before) return visibleConversationWindow(sessionId, undefined, 80).hasMore;
   const row = db.prepare(`
     select 1 as found
     from messages
-    where session_id = ? and created_at < ?
+    where session_id = ? and (created_at < ? or (created_at = ? and id < ?))
     limit 1
-  `).get(sessionId, before) as { found: number } | undefined;
+  `).get(sessionId, before.createdAt, before.createdAt, before.id) as { found: number } | undefined;
   return Boolean(row);
 }
 
-function visibleConversationWindow(sessionId: string, before: string | undefined, limit: number): { messages: StoredMessage[]; hasMore: boolean } {
+function visibleConversationWindow(sessionId: string, before: MessageCursor | undefined, limit: number): { messages: StoredMessage[]; hasMore: boolean } {
   const pageSize = 250;
   let offset = 0;
   let visibleItems = 0;
@@ -224,10 +226,10 @@ function visibleConversationWindow(sessionId: string, before: string | undefined
       ? db.prepare(`
         select id, session_id as sessionId, role, kind, channel, sender_id as senderId, text, created_at as createdAt
         from messages
-        where session_id = ? and created_at < ?
+        where session_id = ? and (created_at < ? or (created_at = ? and id < ?))
         order by created_at desc, id desc
         limit ? offset ?
-      `).all(sessionId, before, pageSize, offset) as StoredMessage[]
+      `).all(sessionId, before.createdAt, before.createdAt, before.id, pageSize, offset) as StoredMessage[]
       : db.prepare(`
         select id, session_id as sessionId, role, kind, channel, sender_id as senderId, text, created_at as createdAt
         from messages

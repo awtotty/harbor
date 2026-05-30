@@ -30,10 +30,10 @@ export function useChatMessages({ sessionId, activeSessionUpdatedAt }: { session
 
   const loadOlder = useCallback(async () => {
     const first = messages[0];
-    if (!first?.createdAt || loadingOlder || !hasOlder) return;
+    if (!first?.createdAt || !first.id || loadingOlder || !hasOlder) return;
     setLoadingOlder(true);
     try {
-      const res = await fetch(`/api/sessions/${sessionId}/messages?limit=${PAGE_SIZE}&before=${encodeURIComponent(first.createdAt)}`);
+      const res = await fetch(`/api/sessions/${sessionId}/messages?limit=${PAGE_SIZE}&before=${encodeURIComponent(first.createdAt)}&beforeId=${encodeURIComponent(first.id)}`);
       if (!res.ok) return;
       const data = await res.json();
       const older = normalize(Array.isArray(data.messages) ? data.messages : []);
