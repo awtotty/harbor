@@ -179,7 +179,7 @@ nav button { justify-content: flex-start; text-align: left; text-transform: capi
 .empty h3 { color: var(--text); margin-bottom: 8px; font-size: 24px; }
 .suggestions { display: grid; gap: 8px; margin-top: 22px; }
 .suggestions button { justify-content: flex-start; text-align: left; background: var(--panel-2); }
-.bubble { display: grid; grid-template-columns: 42px minmax(0, 1fr) auto; gap: 12px; max-width: 860px; align-items: end; content-visibility: auto; contain-intrinsic-size: 90px; }
+.bubble { display: grid; grid-template-columns: 42px minmax(0, 1fr) auto; gap: 12px; max-width: 860px; align-items: end; }
 .bubble.user { align-self: flex-end; grid-template-columns: auto minmax(0, 1fr) 42px; }
 .bubble.user .avatar { grid-column: 3; grid-row: 1; background: var(--accent-2); }
 .bubble.user .bubbleText { grid-column: 2; grid-row: 1; background: color-mix(in srgb, var(--accent) 12%, var(--panel)); border-color: color-mix(in srgb, var(--accent) 42%, var(--border)); }
