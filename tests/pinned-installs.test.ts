@@ -19,7 +19,7 @@ test('bundle npm globals are pinned to an npm major or exact version', async () 
   }
 });
 
-test('Docker base image is pinned to a Node patch tag', async () => {
+test('Docker base image is pinned to a Node patch tag on Debian Trixie', async () => {
   const dockerfile = await readFile('Dockerfile', 'utf8');
-  assert.match(dockerfile, /^FROM node:\d+\.\d+\.\d+-bookworm$/m);
+  assert.match(dockerfile, /^FROM node:\d+\.\d+\.\d+-trixie$/m);
 });
