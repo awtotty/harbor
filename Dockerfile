@@ -1,7 +1,7 @@
 FROM node:24.16.0-trixie
 
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends sudo git gh ca-certificates sqlite3 curl jq python3 make g++ ripgrep fd-find less vim-tiny nano unzip zip rsync procps htop dnsutils iputils-ping netcat-openbsd tree tmux \
+  && apt-get install -y --no-install-recommends sudo git gh lazygit openssh-client ca-certificates sqlite3 curl jq python3 python3-pip python3-venv make g++ ripgrep fd-find less vim-tiny nano unzip zip rsync procps htop dnsutils iputils-ping netcat-openbsd tree tmux shellcheck \
   && rm -rf /var/lib/apt/lists/* \
   && ln -sf /usr/bin/fdfind /usr/local/bin/fd \
   && ln -sf /usr/bin/vi /usr/local/bin/vim \
