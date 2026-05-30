@@ -52,7 +52,7 @@ export async function selectModel(provider: string, id: string) {
   await writeHarborConfig({ ...current, selectedModel: { provider, id } });
 }
 
-export async function loginProvider(providerId: string, sink: EventSink, loginId = crypto.randomUUID()): Promise<void> {
+export async function loginProvider(providerId: string, sink: EventSink, loginId: string = crypto.randomUUID(), manualCodeInput?: (prompt: string) => Promise<string>): Promise<void> {
   const authStorage = createAuthStorage();
   createModelRegistry(authStorage);
   sink({ type: 'status', text: `Starting login for ${providerId}` });
@@ -75,7 +75,9 @@ export async function loginProvider(providerId: string, sink: EventSink, loginId
       throw new Error('This login flow requested interactive input that Harbor does not support yet.');
     },
     onManualCodeInput: async () => {
-      sink({ type: 'auth_manual_request', loginId, prompt: 'If the browser redirect to localhost:1455 fails, copy the full localhost URL from the address bar and paste it here.' });
+      const prompt = 'If the browser redirect to localhost:1455 fails, copy the full localhost URL from the address bar and paste it here.';
+      sink({ type: 'auth_manual_request', loginId, prompt });
+      if (manualCodeInput) return manualCodeInput(prompt);
       return await new Promise<string>((resolve) => {
         pendingManualInputs.set(loginId, resolve);
       });

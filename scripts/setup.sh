@@ -149,6 +149,32 @@ start_harbor() {
   docker compose up --build -d
 }
 
+wait_for_harbor() {
+  echo
+  echo "Waiting for Harbor to become healthy..."
+  for _ in {1..60}; do
+    if docker compose --profile updater exec -T harbor curl -fsS http://localhost:8080/healthz >/dev/null 2>&1; then
+      return 0
+    fi
+    sleep 2
+  done
+  echo "Harbor did not become healthy in time. Check logs with: docker compose --profile updater logs -f"
+  return 1
+}
+
+provider_login() {
+  echo
+  echo "Harbor is running at: http://${HARBOR_SETUP_BIND_HOST}:8080"
+  if confirm "Log in to a model provider now?" Y; then
+    echo
+    echo "Harbor will run the provider login inside the container so credentials are saved to the persistent /config volume."
+    if ! docker compose --profile updater exec -T harbor sudo -H -E -u agent HOME=/home/agent node /app/dist/server/provider-login-cli.js; then
+      echo
+      echo "Provider login did not complete. Harbor is still running; you can retry later from the web app with /login or from Config."
+    fi
+  fi
+}
+
 main() {
   echo "Harbor setup"
   echo
@@ -176,6 +202,8 @@ main() {
   prompt_bind_host
   write_env
   start_harbor
+  wait_for_harbor
+  provider_login
 
   echo
   echo "Harbor setup complete."
