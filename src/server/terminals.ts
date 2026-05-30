@@ -3,6 +3,7 @@ import { execFileSync } from 'node:child_process';
 import pty, { type IPty, type IPtyForkOptions } from 'node-pty';
 import { loadEnvFromFile, workspaceDir } from './config.js';
 import { recordEvent, setSystemStatus } from './db.js';
+import { persistentToolEnv } from './tool-env.js';
 
 export type TerminalInfo = { id: string; name: string; createdAt: string; alive: boolean };
 type Terminal = TerminalInfo & { pty: IPty; listeners: Set<(chunk: string) => void>; buffer: string[] };
@@ -11,19 +12,15 @@ const terminals = new Map<string, Terminal>();
 const terminalUser = process.env.HARBOR_TERMINAL_USER ?? 'agent';
 
 async function terminalUserOptions(): Promise<Pick<IPtyForkOptions, 'uid' | 'gid' | 'env'>> {
-  const env = {
+  const env = persistentToolEnv({
     ...process.env,
     ...(await loadEnvFromFile()),
     TERM: 'xterm-256color',
     USER: terminalUser,
     LOGNAME: terminalUser,
     HOME: `/home/${terminalUser}`,
-    NPM_CONFIG_PREFIX: '/config/tools/npm',
-    PNPM_HOME: '/config/tools/pnpm',
-    CARGO_HOME: '/config/tools/cargo',
-    GOPATH: '/config/tools/go',
-    PATH: `/config/bin:/config/tools/npm/bin:/config/tools/pnpm:/config/tools/cargo/bin:/config/tools/go/bin:/home/${terminalUser}/.local/bin:/app/node_modules/.bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin`,
-  };
+    PATH: `/home/${terminalUser}/.local/bin:/app/node_modules/.bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin`,
+  });
   if (process.platform === 'win32' || process.getuid?.() !== 0) return { env };
   try {
     return {

@@ -1,5 +1,6 @@
 import { spawn } from 'node:child_process';
-import { configDir, workspaceDir } from './config.js';
+import { workspaceDir } from './config.js';
+import { persistentToolEnv } from './tool-env.js';
 import type { CapabilityBundle } from './bundles.js';
 import type { EventSink } from './types.js';
 
@@ -19,7 +20,7 @@ export const bundleInstallers: Record<string, BundleInstaller> = {};
 export async function runBundleCommand(command: string, args: string[], sink: EventSink, context: BundleInstallerContext): Promise<void> {
   const rendered = `${command} ${args.join(' ')}`;
   sink({ type: 'status', text: rendered });
-  const child = spawn(command, args, { cwd: workspaceDir, env: { ...process.env, NPM_CONFIG_PREFIX: `${configDir}/tools/npm`, PNPM_HOME: `${configDir}/tools/pnpm`, CARGO_HOME: `${configDir}/tools/cargo`, GOPATH: `${configDir}/tools/go`, PATH: `${configDir}/bin:${context.npmBin}:${configDir}/tools/pnpm:${configDir}/tools/cargo/bin:${configDir}/tools/go/bin:${process.env.PATH ?? ''}` }, stdio: ['ignore', 'pipe', 'pipe'] });
+  const child = spawn(command, args, { cwd: workspaceDir, env: persistentToolEnv(), stdio: ['ignore', 'pipe', 'pipe'] });
   child.stdout.on('data', (data: Buffer) => sink({ type: 'tool_event', text: data.toString() }));
   child.stderr.on('data', (data: Buffer) => sink({ type: 'tool_event', text: data.toString() }));
   const code = await new Promise<number | null>((resolve, reject) => {

@@ -4,6 +4,7 @@ import { existsSync } from 'node:fs';
 import { piAgentDir, configDir, workspaceDir } from './config.js';
 import { recordEvent, setSystemStatus } from './db.js';
 import { loadEnvFromFile } from './config.js';
+import { persistentToolEnv } from './tool-env.js';
 import type { EventSink } from './types.js';
 
 export type PiPackage = {
@@ -15,13 +16,7 @@ const piBin = '/app/node_modules/.bin/pi';
 
 async function piEnv() {
   return {
-    ...process.env,
-    ...(await loadEnvFromFile()),
-    NPM_CONFIG_PREFIX: `${configDir}/tools/npm`,
-    PNPM_HOME: `${configDir}/tools/pnpm`,
-    CARGO_HOME: `${configDir}/tools/cargo`,
-    GOPATH: `${configDir}/tools/go`,
-    PATH: `${configDir}/bin:${configDir}/tools/npm/bin:${configDir}/tools/pnpm:${configDir}/tools/cargo/bin:${configDir}/tools/go/bin:${process.env.PATH ?? ''}`,
+    ...persistentToolEnv({ ...process.env, ...(await loadEnvFromFile()) }),
     PI_CODING_AGENT_DIR: piAgentDir,
     PI_CODING_AGENT_SESSION_DIR: `${configDir}/sessions`,
   };
