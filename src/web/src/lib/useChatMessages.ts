@@ -2,13 +2,13 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ChatMessage } from '../types';
 import { newId } from './id';
 
-export function useChatMessages({ token, sessionId, activeSessionUpdatedAt }: { token: string; sessionId: string; activeSessionUpdatedAt?: string }) {
+export function useChatMessages({ sessionId, activeSessionUpdatedAt }: { sessionId: string; activeSessionUpdatedAt?: string }) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [busy, setBusy] = useState(false);
   const activeAssistantMessageId = useRef<string | undefined>(undefined);
 
   const loadMessages = useCallback(async () => {
-    const res = await fetch(`/api/sessions/${sessionId}/messages`, { headers: { Authorization: `Bearer ${token}` } });
+    const res = await fetch(`/api/sessions/${sessionId}/messages`);
     if (!res.ok) {
       setMessages([{ id: newId(), role: 'event', kind: 'error', text: `Failed to load messages (${res.status})` }]);
       return;
@@ -16,7 +16,7 @@ export function useChatMessages({ token, sessionId, activeSessionUpdatedAt }: { 
     const data = await res.json();
     const nextMessages = Array.isArray(data.messages) ? data.messages : [];
     setMessages(nextMessages.map((m: any) => ({ id: m.id, role: m.role, kind: m.kind, text: m.text, createdAt: m.createdAt })));
-  }, [sessionId, token]);
+  }, [sessionId]);
 
   useEffect(() => {
     if (busy) return;

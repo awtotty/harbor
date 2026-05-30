@@ -2,7 +2,7 @@ import Fastify from 'fastify';
 import fastifyStatic from '@fastify/static';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createAuthSession, canAttemptLogin, isAuthed, recordLoginFailure, recordLoginSuccess, revokeAuthSession, verifyPassword } from './auth.js';
+import { createAuthSession, canAttemptLogin, isAuthed, isAuthedCookieRequest, recordLoginFailure, recordLoginSuccess, revokeAuthSession, revokeAuthToken, verifyPassword } from './auth.js';
 import { ensureConfigDir } from './config.js';
 import { MessageRouter } from './router.js';
 import { ensureDefaultPackages } from './packages.js';
@@ -14,6 +14,7 @@ import { registerSessionRoutes } from './routes/session-routes.js';
 import { registerTerminalRoutes } from './routes/terminal-routes.js';
 import { registerTelegramRoutes } from './routes/telegram-routes.js';
 import { recordStartupStatus, registerObservabilityRoutes } from './routes/observability-routes.js';
+import { registerDevProxy } from './dev-proxy.js';
 import { startTelegramBot } from './telegram.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -33,7 +34,7 @@ if (password === 'harbor') {
 app.addHook('preHandler', async (request, reply) => {
   const pathname = request.url.split('?')[0];
   if (pathname === '/healthz' || pathname === '/api/login' || !pathname.startsWith('/api/')) return;
-  if (!isAuthed(request.headers.authorization)) return reply.code(401).send({ error: 'Unauthorized' });
+  if (!isRequestAuthed(request.headers.authorization, request.headers.cookie, headerValue(request.headers.referer), headerValue(request.headers.host))) return reply.code(401).send({ error: 'Unauthorized' });
 });
 
 app.post('/api/login', async (request, reply) => {
@@ -45,11 +46,17 @@ app.post('/api/login', async (request, reply) => {
     return reply.code(401).send({ error: 'Invalid password' });
   }
   recordLoginSuccess(loginKey);
-  return createAuthSession();
+  const session = createAuthSession();
+  reply.header('Set-Cookie', authCookie(session.token));
+  return session;
 });
 
-app.post('/api/logout', async (request) => {
+app.get('/api/session', async () => ({ ok: true }));
+
+app.post('/api/logout', async (request, reply) => {
   revokeAuthSession(request.headers.authorization);
+  revokeAuthToken(readCookie(request.headers.cookie, 'harborToken'));
+  reply.header('Set-Cookie', clearAuthCookie());
   return { ok: true };
 });
 
@@ -68,8 +75,39 @@ await registerTerminalRoutes(app);
 await registerTelegramRoutes(app);
 await registerObservabilityRoutes(app);
 await registerChatRoutes(app, routeContext);
+await registerDevProxy(app);
 recordStartupStatus();
 startTelegramBot(router, app.log);
+
+function isRequestAuthed(authorization: string | undefined, cookie: string | undefined, referer: string | undefined, host: string | undefined): boolean {
+  return isAuthed(authorization) || isAuthedCookieRequest(cookie, referer, host);
+}
+
+function headerValue(value: string | string[] | undefined): string | undefined {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+function authCookie(token: string): string {
+  return `harborToken=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Lax`;
+}
+
+function clearAuthCookie(): string {
+  return 'harborToken=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0';
+}
+
+function readCookie(cookieHeader: string | undefined, name: string): string | undefined {
+  if (!cookieHeader) return undefined;
+  for (const part of cookieHeader.split(';')) {
+    const [key, ...value] = part.trim().split('=');
+    if (key !== name) continue;
+    try {
+      return decodeURIComponent(value.join('='));
+    } catch {
+      return undefined;
+    }
+  }
+  return undefined;
+}
 
 const webRoot = join(__dirname, '../web');
 app.register(fastifyStatic, { root: webRoot, wildcard: false });

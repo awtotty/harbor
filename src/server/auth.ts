@@ -38,11 +38,33 @@ export function createAuthSession(): { token: string; expiresAt: string } {
 export function revokeAuthSession(authHeader: string | undefined): boolean {
   const token = bearerToken(authHeader);
   if (!token) return false;
+  return revokeAuthToken(token);
+}
+
+export function revokeAuthToken(token: string | undefined): boolean {
+  if (!token) return false;
   return sessions.delete(hash(token));
 }
 
 export function isAuthed(authHeader: string | undefined): boolean {
-  const token = bearerToken(authHeader);
+  return isAuthToken(bearerToken(authHeader));
+}
+
+export function isAuthedCookie(cookieHeader: string | undefined): boolean {
+  return isAuthToken(readCookie(cookieHeader, 'harborToken'));
+}
+
+export function isAuthedCookieRequest(cookieHeader: string | undefined, referer: string | undefined, host: string | undefined): boolean {
+  if (!isAuthedCookie(cookieHeader) || !referer || !host) return false;
+  try {
+    const refererUrl = new URL(referer);
+    return refererUrl.host === host && !refererUrl.pathname.startsWith('/proxy/');
+  } catch {
+    return false;
+  }
+}
+
+export function isAuthToken(token: string | undefined): boolean {
   if (!token) return false;
   const tokenHash = hash(token);
   const session = sessions.get(tokenHash);
@@ -81,6 +103,20 @@ function bearerToken(authHeader: string | undefined): string | undefined {
   if (!authHeader?.startsWith('Bearer ')) return undefined;
   const token = authHeader.slice('Bearer '.length).trim();
   return token || undefined;
+}
+
+function readCookie(cookieHeader: string | undefined, name: string): string | undefined {
+  if (!cookieHeader) return undefined;
+  for (const part of cookieHeader.split(';')) {
+    const [key, ...value] = part.trim().split('=');
+    if (key !== name) continue;
+    try {
+      return decodeURIComponent(value.join('='));
+    } catch {
+      return undefined;
+    }
+  }
+  return undefined;
 }
 
 function cleanupExpiredSessions(): void {
