@@ -69,7 +69,7 @@ inside a running container is temporary because those commands write to the imag
 
 Recommended options:
 
-1. Add common tools to the Dockerfile. Harbor already includes common tools such as `gh`, `rg`, `fd`, `vim`, `tmux`, `rsync`, and `tree`.
+1. Add common tools to the Dockerfile. Harbor already includes common tools such as `gh`, `lazygit`, `ssh`, `python3`, `pip`, `venv`, `shellcheck`, `rg`, `fd`, `vim`, `tmux`, `rsync`, and `tree`.
 2. Place standalone binaries in `/config/bin`.
 3. Keep CLI auth/config in `/home/agent`.
 
