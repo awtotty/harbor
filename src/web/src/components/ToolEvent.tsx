@@ -1,4 +1,4 @@
-import { memo, useMemo } from 'react';
+import { memo, useMemo, useState } from 'react';
 import { formatClockTime } from '../lib/time';
 import type { ChatMessage } from '../types';
 
@@ -21,15 +21,36 @@ export const MessageBubble = memo(function MessageBubble({ message }: { message:
 });
 
 export const ActivityGroup = memo(function ActivityGroup({ messages }: { messages: ChatMessage[] }) {
-  const { parsed, visibleEvents, hiddenEvents, summary } = useMemo(() => {
-    const parsed = messages.map((message) => parseToolEvent(message.text));
-    const visibleEvents = meaningfulEvents(parsed);
-    const hiddenEvents = parsed.filter((event) => !visibleEvents.includes(event));
-    const summary = summarizeActivity(visibleEvents.length ? visibleEvents : parsed);
-    return { parsed, visibleEvents, hiddenEvents, summary };
-  }, [messages]);
-  return <details className="activityCard"><summary><span className="toolBadge">Activity</span><span>{summary}</span><small>{visibleEvents.length || parsed.length} item{(visibleEvents.length || parsed.length) === 1 ? '' : 's'}</small></summary><div className="activityList">{visibleEvents.map((event, index) => <ToolEventCard key={`${event.eventType}-${index}-${event.title}`} event={event} compact defaultOpen={visibleEvents.length === 1 && index === 0} />)}{hiddenEvents.length > 0 && <details className="rawEvent"><summary>{hiddenEvents.length} low-level event{hiddenEvents.length === 1 ? '' : 's'}</summary><div className="activityList">{hiddenEvents.map((event, index) => <ToolEventCard key={`${event.eventType}-${index}-${event.title}`} event={event} compact />)}</div></details>}</div></details>;
+  const [open, setOpen] = useState(false);
+  const summary = useMemo(() => summarizeRawActivity(messages), [messages]);
+  const details = useMemo(() => open ? activityDetails(messages) : undefined, [messages, open]);
+  const itemCount = details?.itemCount ?? messages.length;
+  return <details className="activityCard" onToggle={(event) => setOpen(event.currentTarget.open)}><summary><span className="toolBadge">Activity</span><span>{summary}</span><small>{itemCount} item{itemCount === 1 ? '' : 's'}</small></summary>{details && <div className="activityList">{details.visibleEvents.map((event, index) => <ToolEventCard key={`${event.eventType}-${index}-${event.title}`} event={event} compact defaultOpen={details.visibleEvents.length === 1 && index === 0} />)}{details.hiddenEvents.length > 0 && <LazyRawEvents events={details.hiddenEvents} />}</div>}</details>;
 });
+
+function LazyRawEvents({ events }: { events: ParsedToolEvent[] }) {
+  const [open, setOpen] = useState(false);
+  return <details className="rawEvent" onToggle={(event) => setOpen(event.currentTarget.open)}><summary>{events.length} low-level event{events.length === 1 ? '' : 's'}</summary>{open && <div className="activityList">{events.map((event, index) => <ToolEventCard key={`${event.eventType}-${index}-${event.title}`} event={event} compact />)}</div>}</details>;
+}
+
+function activityDetails(messages: ChatMessage[]) {
+  const parsed = messages.map((message) => parseToolEvent(message.text));
+  const visibleEvents = meaningfulEvents(parsed);
+  const hiddenEvents = parsed.filter((event) => !visibleEvents.includes(event));
+  return { parsed, visibleEvents, hiddenEvents, itemCount: visibleEvents.length || parsed.length };
+}
+
+function summarizeRawActivity(messages: ChatMessage[]): string {
+  const counts = messages.reduce((acc, message) => {
+    const text = message.text.toLowerCase();
+    if (text.includes('read')) acc.read += 1;
+    else if (text.includes('bash')) acc.bash += 1;
+    else if (text.includes('edit') || text.includes('write')) acc.edit += 1;
+    else acc.other += 1;
+    return acc;
+  }, { read: 0, bash: 0, edit: 0, other: 0 });
+  return summarizeCounts(counts);
+}
 
 function ToolEvent({ text, compact = false, defaultOpen = false }: { text: string; compact?: boolean; defaultOpen?: boolean }) {
   return <ToolEventCard event={parseToolEvent(text)} compact={compact} defaultOpen={defaultOpen} />;
@@ -86,6 +107,10 @@ function summarizeActivity(events: ParsedToolEvent[]): string {
     else acc.other += 1;
     return acc;
   }, { read: 0, bash: 0, edit: 0, other: 0 });
+  return summarizeCounts(counts);
+}
+
+function summarizeCounts(counts: { read: number; bash: number; edit: number; other: number }): string {
   const parts = [
     counts.read ? `read ${counts.read} file${counts.read === 1 ? '' : 's'}` : '',
     counts.bash ? `ran ${counts.bash} command${counts.bash === 1 ? '' : 's'}` : '',
