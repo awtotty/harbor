@@ -1,4 +1,4 @@
-FROM node:24-bookworm
+FROM node:24.16.0-bookworm
 
 RUN apt-get update \
   && apt-get install -y --no-install-recommends sudo git gh ca-certificates sqlite3 curl jq python3 make g++ ripgrep fd-find less vim-tiny nano unzip zip rsync procps htop dnsutils iputils-ping netcat-openbsd tree tmux \
