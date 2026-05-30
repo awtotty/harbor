@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, useEffect, useRef, useState } from 'react';
+import React, { Suspense, lazy, memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { ActivityGroup, MessageBubble } from './components/ToolEvent';
 import { promptSuggestions, themes } from './constants';
@@ -146,16 +146,11 @@ function SessionTags({ session }: { session: HarborSession }) {
 }
 
 function Chat({ sessionId, activeSessionUpdatedAt, sessions, onSessionActivity, onSwitchSession, onArchiveSession, canArchive }: { sessionId: string; activeSessionUpdatedAt?: string; sessions: HarborSession[]; onSessionActivity: () => void | Promise<unknown>; onSwitchSession: (sessionId: string) => void; onArchiveSession: () => void | Promise<void>; canArchive: boolean }) {
-  const [draft, setDraft] = useState('');
-  const bottomRef = useRef<HTMLDivElement>(null);
-  const { messages, busy, addMessage, appendAssistant, beginSend, finishSend } = useChatMessages({ sessionId, activeSessionUpdatedAt });
-  useEffect(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), [messages]);
+  const [suggestion, setSuggestion] = useState<{ id: string; text: string }>();
+  const { messages, busy, loadingOlder, hasOlder, loadOlder, addMessage, appendAssistant, beginSend, finishSend } = useChatMessages({ sessionId, activeSessionUpdatedAt });
 
-  async function send(event?: React.FormEvent) {
-    event?.preventDefault();
-    const message = draft.trim();
+  const sendMessage = useCallback(async (message: string) => {
     if (!message || busy) return;
-    setDraft('');
     beginSend();
     addMessage({ id: newId(), role: 'user', text: message, createdAt: new Date().toISOString() });
     const startRes = await fetch('/api/chat/start', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message, sessionId }) });
@@ -192,10 +187,30 @@ function Chat({ sessionId, activeSessionUpdatedAt, sessions, onSessionActivity, 
     }
     finishSend();
     onSessionActivity();
-  }
+  }, [addMessage, appendAssistant, beginSend, busy, finishSend, onSessionActivity, onSwitchSession, sessionId]);
 
   const activeSession = sessions.find((session) => session.id === sessionId);
-  return <section className="chatScreen"><div className="chatHeader"><div><h2>{activeSession?.name ?? 'Session'}</h2><p><code>/workspace</code> · <span>{sessionId}</span></p></div><div className="chatActions"><button className="ghost" onClick={onArchiveSession} disabled={busy || !canArchive}>Archive</button></div></div><div className="messageList">{messages.length === 0 && <div className="empty"><h3>Start a working session</h3><p>Ask Harbor to inspect files, run commands, review changes, or build something in this workspace.</p><div className="suggestions">{promptSuggestions.map((suggestion) => <button key={suggestion} onClick={() => setDraft(suggestion)}>{suggestion}</button>)}</div></div>}{groupChatMessages(messages).map((item) => item.type === 'activity' ? <ActivityGroup key={item.id} messages={item.messages} /> : <MessageBubble key={item.message.id} message={item.message} />)}<div ref={bottomRef} /></div><form className="composer" onSubmit={send}><textarea value={draft} onChange={(e) => setDraft(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void send(); } }} placeholder="Message agent…" /><div className="composerFooter"><span>Enter to send · Shift+Enter for newline</span><button disabled={busy || !draft.trim()}>{busy ? 'Working…' : 'Send ↵'}</button></div></form></section>;
+  return <section className="chatScreen"><div className="chatHeader"><div><h2>{activeSession?.name ?? 'Session'}</h2><p><code>/workspace</code> · <span>{sessionId}</span></p></div><div className="chatActions"><button className="ghost" onClick={onArchiveSession} disabled={busy || !canArchive}>Archive</button></div></div><ChatMessageList messages={messages} hasOlder={hasOlder} loadingOlder={loadingOlder} onLoadOlder={loadOlder} onSuggestion={(text) => setSuggestion({ id: newId(), text })} /><ChatComposer busy={busy} suggestion={suggestion} onSend={sendMessage} /></section>;
+}
+
+const ChatMessageList = memo(function ChatMessageList({ messages, hasOlder, loadingOlder, onLoadOlder, onSuggestion }: { messages: ChatMessage[]; hasOlder: boolean; loadingOlder: boolean; onLoadOlder: () => void | Promise<void>; onSuggestion: (text: string) => void }) {
+  const bottomRef = useRef<HTMLDivElement>(null);
+  const groupedMessages = useMemo(() => groupChatMessages(messages), [messages]);
+  useEffect(() => bottomRef.current?.scrollIntoView({ behavior: 'auto' }), [messages]);
+  return <div className="messageList">{hasOlder && <button className="loadOlder" disabled={loadingOlder} onClick={onLoadOlder}>{loadingOlder ? 'Loading…' : 'Load earlier messages'}</button>}{messages.length === 0 && <div className="empty"><h3>Start a working session</h3><p>Ask Harbor to inspect files, run commands, review changes, or build something in this workspace.</p><div className="suggestions">{promptSuggestions.map((item) => <button key={item} onClick={() => onSuggestion(item)}>{item}</button>)}</div></div>}{groupedMessages.map((item) => item.type === 'activity' ? <ActivityGroup key={item.id} messages={item.messages} /> : <MessageBubble key={item.message.id} message={item.message} />)}<div ref={bottomRef} /></div>;
+});
+
+function ChatComposer({ busy, suggestion, onSend }: { busy: boolean; suggestion?: { id: string; text: string }; onSend: (message: string) => void | Promise<void> }) {
+  const [draft, setDraft] = useState('');
+  useEffect(() => { if (suggestion) setDraft(suggestion.text); }, [suggestion]);
+  async function send(event?: React.FormEvent) {
+    event?.preventDefault();
+    const message = draft.trim();
+    if (!message || busy) return;
+    setDraft('');
+    await onSend(message);
+  }
+  return <form className="composer" onSubmit={send}><textarea value={draft} onChange={(e) => setDraft(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void send(); } }} placeholder="Message agent…" /><div className="composerFooter"><span>Enter to send · Shift+Enter for newline</span><button disabled={busy || !draft.trim()}>{busy ? 'Working…' : 'Send ↵'}</button></div></form>;
 }
 
 type RenderItem = { type: 'message'; message: ChatMessage } | { type: 'activity'; id: string; messages: ChatMessage[] };
