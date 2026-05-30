@@ -54,6 +54,10 @@ prompt_password() {
       HARBOR_SETUP_PASSWORD="$password"
       return
     fi
+    if [[ "$password" == "harbor" ]]; then
+      echo "The password 'harbor' is reserved for local development. Choose a different password."
+      continue
+    fi
     read -r -s -p "Confirm password: " confirm_password
     echo
     if [[ "$password" == "$confirm_password" ]]; then
