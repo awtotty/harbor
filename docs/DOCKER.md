@@ -24,7 +24,7 @@ Open Harbor at:
 http://localhost:8080
 ```
 
-Default Compose bindings are localhost-only for the web UI and direct agent-started dev-server ports. Harbor also provides an authenticated private dev-server proxy at `/proxy/<port>/`.
+Default Compose binds only the Harbor web UI to the host. Agent-started dev servers are accessed through Harbor's authenticated private dev-server proxy at `/proxy/<port>/` instead of broad host port publishing.
 
 ## Environment
 
@@ -117,7 +117,7 @@ http://localhost:8080/proxy/3000/
 http://localhost:8080/proxy/5173/
 ```
 
-The proxy requires Harbor auth and forwards only to `127.0.0.1:<port>` inside the container. Allowed ports are controlled by `HARBOR_DEV_PROXY_PORTS`, which defaults to `3000-3099,5173`. Harbor strips its own credentials before forwarding requests and drops upstream `Set-Cookie` headers so dev apps cannot capture or overwrite Harbor session cookies. This is intended for private previews and development, not public app hosting.
+The proxy requires Harbor auth and forwards only to `127.0.0.1:<port>` inside the container. Allowed ports are controlled by `HARBOR_DEV_PROXY_PORTS`, which defaults to `3000-3099,5173`. Harbor strips its own credentials before forwarding requests and drops upstream `Set-Cookie` headers from normal HTTP proxy responses so dev apps cannot capture or overwrite Harbor session cookies. This is intended for private previews and development, not public app hosting.
 
 This is same-origin trusted preview mode. Frontend JavaScript served from `/proxy/<port>/` runs on the Harbor browser origin and is not browser-isolated from the Harbor UI/API, so only open dev apps you trust as part of your Harbor workspace. Public or untrusted app hosting is out of scope for this appliance runtime.
 
@@ -138,13 +138,7 @@ export default defineConfig({
 });
 ```
 
-Compose still publishes container ports `3000-3099` for direct access during the transition:
-
-```text
-${HARBOR_DEV_BIND_HOST:-127.0.0.1}:3000-3099 -> container ports 3000-3099
-```
-
-Leave `HARBOR_DEV_BIND_HOST=127.0.0.1` for local-only direct-port access, or set it to the host's Tailscale IP for Tailnet access.
+Compose does not publish the dev-server port range to the host. Use the authenticated `/proxy/<port>/` path for private previews.
 
 ## Updating
 

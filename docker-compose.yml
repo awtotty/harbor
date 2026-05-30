@@ -9,7 +9,6 @@ services:
     restart: unless-stopped
     ports:
       - "${HARBOR_BIND_HOST:-127.0.0.1}:${HARBOR_PORT:-8080}:8080"
-      - "${HARBOR_DEV_BIND_HOST:-127.0.0.1}:3000-3099:3000-3099"
     environment:
       HARBOR_PASSWORD: ${HARBOR_PASSWORD:-harbor}
       HARBOR_PRODUCTION: ${HARBOR_PRODUCTION:-false}

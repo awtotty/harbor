@@ -84,13 +84,12 @@ HARBOR_PASSWORD=change-me
 HARBOR_PRODUCTION=false
 HARBOR_BIND_HOST=127.0.0.1
 HARBOR_PORT=8080
-HARBOR_DEV_BIND_HOST=127.0.0.1
 HARBOR_DEV_PROXY_PORTS=3000-3099,5173
 ```
 
 Harbor includes a private dev-server proxy for apps started by the agent inside the container. After logging in, open a dev server through Harbor at `/proxy/<port>/`, for example `http://localhost:8080/proxy/5173/`. Proxy targets are limited to `127.0.0.1` inside the container and to `HARBOR_DEV_PROXY_PORTS`.
 
-Compose still publishes container ports `3000-3099` for direct dev-server access during the transition. Set `HARBOR_DEV_BIND_HOST` to your Tailscale IP if you need Tailnet access to those direct ports. The proxy path is preferred because it stays behind Harbor auth.
+Compose no longer publishes a broad dev-server port range to the host. Use the authenticated proxy path for private previews.
 
 For private Tailnet access, bind `HARBOR_BIND_HOST` to the host's Tailscale IP or MagicDNS-resolved interface. Avoid exposing Harbor directly to the public internet.
 

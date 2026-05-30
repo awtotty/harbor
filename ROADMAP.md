@@ -114,17 +114,18 @@ Near-term bundle ideas:
 - Bundle tests and validation helpers
 - Documentation examples for custom installers
 
-## Major Remaining Feature: Private Dev Server Proxy
+## Delivered: Private Dev Server Proxy
 
-Harbor should let the agent run development servers inside the container and make them reachable through Harbor-authenticated routes. This makes Harbor useful as a private remote dev workspace without turning the appliance into a public app-hosting surface.
+Harbor can route Harbor-authenticated paths like `/proxy/:port/` to container-local dev servers. This makes Harbor useful as a private remote dev workspace without publishing a broad Docker dev-port range to the host.
 
-Goal:
+The current proxy is intentionally path-based same-origin trusted preview mode. It is useful for private development, but it is not browser isolation for untrusted apps and it is not public app hosting.
 
-- route Harbor-authenticated paths like `/proxy/:port/` to container-local dev servers
-- support WebSocket/HMR where practical
-- keep previews private behind Harbor auth/Tailscale
-- reduce or eventually remove reliance on Docker-published `3000-3099`
+Follow-up polish:
+
+- improve WebSocket/HMR compatibility where practical
 - make generated apps easy to open from chat, terminal, and System/UI affordances
+- add clearer framework examples for base path configuration
+- consider origin-isolated preview architecture only if Harbor later needs to run untrusted or semi-trusted browser apps
 
 Public app hosting is intentionally out of scope for Harbor's appliance runtime. If Harbor later offers public publishing for blogs, shops, or apps, that should use a separate deployment architecture with appropriate isolation and exposure controls, even if the product experience feels unified.
 
