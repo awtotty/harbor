@@ -18,7 +18,11 @@ async function terminalUserOptions(): Promise<Pick<IPtyForkOptions, 'uid' | 'gid
     USER: terminalUser,
     LOGNAME: terminalUser,
     HOME: `/home/${terminalUser}`,
-    PATH: `/config/bin:/config/tools/npm/bin:/home/${terminalUser}/.local/bin:/app/node_modules/.bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin`,
+    NPM_CONFIG_PREFIX: '/config/tools/npm',
+    PNPM_HOME: '/config/tools/pnpm',
+    CARGO_HOME: '/config/tools/cargo',
+    GOPATH: '/config/tools/go',
+    PATH: `/config/bin:/config/tools/npm/bin:/config/tools/pnpm:/config/tools/cargo/bin:/config/tools/go/bin:/home/${terminalUser}/.local/bin:/app/node_modules/.bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin`,
   };
   if (process.platform === 'win32' || process.getuid?.() !== 0) return { env };
   try {

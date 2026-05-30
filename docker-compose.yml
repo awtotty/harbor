@@ -16,6 +16,10 @@ services:
       HARBOR_WORKSPACE_DIR: /workspace
       HARBOR_TERMINAL_USER: agent
       HARBOR_DEV_PROXY_PORTS: ${HARBOR_DEV_PROXY_PORTS:-3000-3099,5173}
+      NPM_CONFIG_PREFIX: /config/tools/npm
+      PNPM_HOME: /config/tools/pnpm
+      CARGO_HOME: /config/tools/cargo
+      GOPATH: /config/tools/go
       HARBOR_RUNTIME_URL: http://harbor-runtime:8788
       HARBOR_RUNTIME_TOKEN: ${HARBOR_RUNTIME_TOKEN:?Set HARBOR_RUNTIME_TOKEN in .env or run scripts/setup.sh}
       HARBOR_UPDATER_URL: ${HARBOR_UPDATER_URL:-http://harbor-updater:8787}
@@ -39,7 +43,7 @@ services:
         HARBOR_COMMIT: ${HARBOR_COMMIT:-unknown}
         HARBOR_BUILT_AT: ${HARBOR_BUILT_AT:-unknown}
     restart: unless-stopped
-    command: sh -lc "mkdir -p /config/bin /home/agent/.local/bin && printf 'export PATH=\"/config/bin:/config/tools/npm/bin:/home/agent/.local/bin:/app/node_modules/.bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\"\n' > /etc/profile.d/harbor-path.sh && chmod +x /etc/profile.d/harbor-path.sh && chown -R agent:agent /workspace /config /home/agent && exec sudo -H -E -u agent HOME=/home/agent node dist/runtime/index.js"
+    command: sh -lc "mkdir -p /config/bin /config/tools/npm /config/tools/pnpm /config/tools/cargo /config/tools/go /home/agent/.local/bin && printf 'export NPM_CONFIG_PREFIX=\"/config/tools/npm\"\nexport PNPM_HOME=\"/config/tools/pnpm\"\nexport CARGO_HOME=\"/config/tools/cargo\"\nexport GOPATH=\"/config/tools/go\"\nexport PATH=\"/config/bin:/config/tools/npm/bin:/config/tools/pnpm:/config/tools/cargo/bin:/config/tools/go/bin:/home/agent/.local/bin:/app/node_modules/.bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\"\n' > /etc/profile.d/harbor-path.sh && printf 'prefix=/config/tools/npm\n' > /home/agent/.npmrc && chmod +x /etc/profile.d/harbor-path.sh && chown -R agent:agent /workspace /config /home/agent && exec sudo -H -E -u agent HOME=/home/agent node dist/runtime/index.js"
     environment:
       HARBOR_ROLE: runtime
       HARBOR_RUNTIME_PORT: 8788
@@ -48,6 +52,10 @@ services:
       HARBOR_WORKSPACE_DIR: /workspace
       HARBOR_TERMINAL_USER: agent
       HARBOR_DEV_PROXY_PORTS: ${HARBOR_DEV_PROXY_PORTS:-3000-3099,5173}
+      NPM_CONFIG_PREFIX: /config/tools/npm
+      PNPM_HOME: /config/tools/pnpm
+      CARGO_HOME: /config/tools/cargo
+      GOPATH: /config/tools/go
       PI_CODING_AGENT_DIR: /config/pi-agent
       PI_CODING_AGENT_SESSION_DIR: /config/sessions
     volumes:

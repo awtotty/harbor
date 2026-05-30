@@ -24,7 +24,11 @@ RUN pnpm run build \
   && chmod +x /usr/local/bin/pi \
   && chown -R agent:agent /app
 
-ENV PATH="/config/bin:/home/agent/.local/bin:/app/node_modules/.bin:${PATH}" \
+ENV PATH="/config/bin:/config/tools/npm/bin:/config/tools/pnpm:/config/tools/cargo/bin:/config/tools/go/bin:/home/agent/.local/bin:/app/node_modules/.bin:${PATH}" \
+    NPM_CONFIG_PREFIX=/config/tools/npm \
+    PNPM_HOME=/config/tools/pnpm \
+    CARGO_HOME=/config/tools/cargo \
+    GOPATH=/config/tools/go \
     HARBOR_PORT=8080 \
     HARBOR_VERSION=${HARBOR_VERSION} \
     HARBOR_COMMIT=${HARBOR_COMMIT} \
@@ -36,4 +40,4 @@ ENV PATH="/config/bin:/home/agent/.local/bin:/app/node_modules/.bin:${PATH}" \
     PI_CODING_AGENT_SESSION_DIR=/config/sessions
 
 EXPOSE 8080
-CMD mkdir -p /config/bin /home/agent/.local/bin && printf 'export PATH="/config/bin:/config/tools/npm/bin:/home/agent/.local/bin:/app/node_modules/.bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"\n' > /etc/profile.d/harbor-path.sh && printf '#!/bin/sh\nexec node /app/node_modules/@earendil-works/pi-coding-agent/dist/cli.js "$@"\n' > /usr/local/bin/pi && chmod +x /usr/local/bin/pi /etc/profile.d/harbor-path.sh && chown -R agent:agent /workspace /config /home/agent && exec sudo -H -E -u agent HOME=/home/agent node dist/server/index.js
+CMD mkdir -p /config/bin /config/tools/npm /config/tools/pnpm /config/tools/cargo /config/tools/go /home/agent/.local/bin && printf 'export NPM_CONFIG_PREFIX="/config/tools/npm"\nexport PNPM_HOME="/config/tools/pnpm"\nexport CARGO_HOME="/config/tools/cargo"\nexport GOPATH="/config/tools/go"\nexport PATH="/config/bin:/config/tools/npm/bin:/config/tools/pnpm:/config/tools/cargo/bin:/config/tools/go/bin:/home/agent/.local/bin:/app/node_modules/.bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"\n' > /etc/profile.d/harbor-path.sh && printf 'prefix=/config/tools/npm\n' > /home/agent/.npmrc && printf '#!/bin/sh\nexec node /app/node_modules/@earendil-works/pi-coding-agent/dist/cli.js "$@"\n' > /usr/local/bin/pi && chmod +x /usr/local/bin/pi /etc/profile.d/harbor-path.sh && chown -R agent:agent /workspace /config /home/agent && exec sudo -H -E -u agent HOME=/home/agent node dist/server/index.js
