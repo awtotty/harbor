@@ -1,4 +1,4 @@
-import { getProviderStatuses, loginProvider, submitManualLoginInput } from './pi-auth.js';
+import { cancelManualLoginInput, getProviderStatuses, loginProvider, submitManualLoginInput } from './pi-auth.js';
 import type { HarborEvent } from './types.js';
 
 const LOGIN_RUN_TTL_MS = 30 * 60 * 1000;
@@ -138,6 +138,13 @@ function formatEvent(event: HarborEvent): string {
 function cleanupRuns(): void {
   const now = Date.now();
   for (const [id, run] of runs) {
-    if (new Date(run.expiresAt).getTime() <= now) runs.delete(id);
+    if (new Date(run.expiresAt).getTime() > now) continue;
+    if (run.status === 'running') {
+      run.status = 'error';
+      run.error = 'Login run expired.';
+      cancelManualLoginInput(id, run.error);
+      pushEvent(run, { type: 'error', message: run.error });
+    }
+    runs.delete(id);
   }
 }

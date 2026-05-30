@@ -3,13 +3,21 @@ import { piAgentDir } from './config.js';
 import { readHarborConfig, writeHarborConfig } from './app-config.js';
 import type { EventSink } from './types.js';
 
-const pendingManualInputs = new Map<string, (value: string) => void>();
+const pendingManualInputs = new Map<string, { resolve: (value: string) => void; reject: (error: Error) => void }>();
 
 export function submitManualLoginInput(loginId: string, value: string): boolean {
-  const resolve = pendingManualInputs.get(loginId);
-  if (!resolve) return false;
+  const pending = pendingManualInputs.get(loginId);
+  if (!pending) return false;
   pendingManualInputs.delete(loginId);
-  resolve(value);
+  pending.resolve(value);
+  return true;
+}
+
+export function cancelManualLoginInput(loginId: string, reason = 'Login input request expired. Start provider login again.'): boolean {
+  const pending = pendingManualInputs.get(loginId);
+  if (!pending) return false;
+  pendingManualInputs.delete(loginId);
+  pending.reject(new Error(reason));
   return true;
 }
 
@@ -78,8 +86,8 @@ export async function loginProvider(providerId: string, sink: EventSink, loginId
       const prompt = 'If the browser redirect to localhost:1455 fails, copy the full localhost URL from the address bar and paste it here.';
       sink({ type: 'auth_manual_request', loginId, prompt });
       if (manualCodeInput) return manualCodeInput(prompt);
-      return await new Promise<string>((resolve) => {
-        pendingManualInputs.set(loginId, resolve);
+      return await new Promise<string>((resolve, reject) => {
+        pendingManualInputs.set(loginId, { resolve, reject });
       });
     },
     onSelect: async (prompt) => {
