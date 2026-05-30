@@ -4,6 +4,8 @@ set -euo pipefail
 output="backups/harbor-backup-$(date -u +%Y%m%d-%H%M%S).tgz"
 live=false
 export COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-harbor}"
+source "$(dirname "$0")/harbor-env.sh"
+ensure_env_secret HARBOR_RUNTIME_TOKEN
 
 usage() {
   cat <<'USAGE'
@@ -54,18 +56,20 @@ fi
 mkdir -p "$(dirname "$output")"
 
 was_running=false
-container_id="$(docker compose ps -q harbor 2>/dev/null || true)"
-if [[ -n "$container_id" ]] && [[ "$(docker inspect -f '{{.State.Running}}' "$container_id" 2>/dev/null || true)" == "true" ]]; then
-  was_running=true
-fi
+for service in harbor harbor-runtime; do
+  container_id="$(docker compose ps -q "$service" 2>/dev/null || true)"
+  if [[ -n "$container_id" ]] && [[ "$(docker inspect -f '{{.State.Running}}' "$container_id" 2>/dev/null || true)" == "true" ]]; then
+    was_running=true
+  fi
+done
 
 if [[ "$live" == false ]]; then
-  docker compose stop harbor >/dev/null
+  docker compose stop harbor harbor-runtime >/dev/null
 fi
 
 cleanup() {
   if [[ "$live" == false && "$was_running" == true ]]; then
-    docker compose up -d harbor >/dev/null
+    docker compose up -d harbor-runtime harbor >/dev/null
   fi
 }
 trap cleanup EXIT
@@ -74,7 +78,7 @@ created_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 commit="$(git rev-parse --short HEAD 2>/dev/null || echo unknown)"
 version="$(git describe --tags --exact-match 2>/dev/null || echo dev)"
 
-docker compose run --rm --no-deps --entrypoint sh harbor -c '
+docker compose run --rm --no-deps --entrypoint sh harbor-runtime -c '
   set -eu
   cat > /tmp/harbor-backup-manifest.txt
   tar czf - -C / config workspace home/agent tmp/harbor-backup-manifest.txt

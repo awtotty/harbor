@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { listEvents, listSystemStatus, recordEvent, setSystemStatus } from '../db.js';
 import { currentVersion, getUpdateStatus, requestUpdate } from '../updates.js';
+import { runtimeHealth } from '../runtime-config.js';
 
 export async function registerObservabilityRoutes(app: FastifyInstance) {
   app.get('/api/observability/events', async (request) => {
@@ -8,7 +9,21 @@ export async function registerObservabilityRoutes(app: FastifyInstance) {
     return { events: listEvents({ source: query.source, level: query.level, limit: query.limit ? Number(query.limit) : undefined }) };
   });
 
-  app.get('/api/observability/status', async () => ({ systems: listSystemStatus() }));
+  app.get('/api/observability/status', async () => {
+    const systems = listSystemStatus();
+    const runtime = await runtimeHealth();
+    if (runtime.configured) {
+      systems.unshift({
+        key: 'runtime',
+        status: runtime.ok ? 'ok' : 'error',
+        summary: runtime.ok ? 'Runtime service reachable' : `Runtime service unavailable${runtime.error ? `: ${runtime.error}` : ''}`,
+        updatedAt: new Date().toISOString(),
+        lastOkAt: runtime.ok ? new Date().toISOString() : null,
+        lastErrorAt: runtime.ok ? null : new Date().toISOString(),
+      });
+    }
+    return { systems };
+  });
 
   app.get('/api/updates/status', async () => getUpdateStatus());
   app.post('/api/updates/request', async (request, reply) => {

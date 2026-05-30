@@ -16,14 +16,14 @@ services:
       HARBOR_WORKSPACE_DIR: /workspace
       HARBOR_TERMINAL_USER: agent
       HARBOR_DEV_PROXY_PORTS: ${HARBOR_DEV_PROXY_PORTS:-3000-3099,5173}
+      HARBOR_RUNTIME_URL: http://harbor-runtime:8788
+      HARBOR_RUNTIME_TOKEN: ${HARBOR_RUNTIME_TOKEN:?Set HARBOR_RUNTIME_TOKEN in .env or run scripts/setup.sh}
       HARBOR_UPDATER_URL: ${HARBOR_UPDATER_URL:-http://harbor-updater:8787}
       HARBOR_UPDATER_TOKEN: ${HARBOR_UPDATER_TOKEN:-}
       PI_CODING_AGENT_DIR: /config/pi-agent
       PI_CODING_AGENT_SESSION_DIR: /config/sessions
     volumes:
-      - harbor-workspace:/workspace
       - harbor-config:/config
-      - harbor-home:/home/agent
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://localhost:8080/healthz"]
       interval: 30s
@@ -31,8 +31,37 @@ services:
       retries: 3
       start_period: 20s
 
+  harbor-runtime:
+    build:
+      context: .
+      args:
+        HARBOR_VERSION: ${HARBOR_VERSION:-dev}
+        HARBOR_COMMIT: ${HARBOR_COMMIT:-unknown}
+        HARBOR_BUILT_AT: ${HARBOR_BUILT_AT:-unknown}
+    restart: unless-stopped
+    command: sh -lc "mkdir -p /config/bin /home/agent/.local/bin && printf 'export PATH=\"/config/bin:/config/tools/npm/bin:/home/agent/.local/bin:/app/node_modules/.bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\"\n' > /etc/profile.d/harbor-path.sh && chmod +x /etc/profile.d/harbor-path.sh && chown -R agent:agent /workspace /config /home/agent && exec sudo -H -E -u agent HOME=/home/agent node dist/runtime/index.js"
+    environment:
+      HARBOR_ROLE: runtime
+      HARBOR_RUNTIME_PORT: 8788
+      HARBOR_RUNTIME_TOKEN: ${HARBOR_RUNTIME_TOKEN:?Set HARBOR_RUNTIME_TOKEN in .env or run scripts/setup.sh}
+      HARBOR_CONFIG_DIR: /config
+      HARBOR_WORKSPACE_DIR: /workspace
+      HARBOR_TERMINAL_USER: agent
+      HARBOR_DEV_PROXY_PORTS: ${HARBOR_DEV_PROXY_PORTS:-3000-3099,5173}
+      PI_CODING_AGENT_DIR: /config/pi-agent
+      PI_CODING_AGENT_SESSION_DIR: /config/sessions
+    volumes:
+      - harbor-workspace:/workspace
+      - harbor-config:/config
+      - harbor-home:/home/agent
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8788/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
   harbor-updater:
-    profiles: ["updater"]
     build:
       context: .
       dockerfile: Dockerfile.updater

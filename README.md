@@ -35,6 +35,7 @@ Harbor is not a hardened multi-tenant sandbox. Treat anyone with access to the w
 - SQLite app state and transcript storage
 - Shared Harbor commands in web and Telegram (`/help`, `/status`, `/sessions`, `/new [name]`, `/update`)
 - Telegram bot integration for messaging your agent remotely
+- Separate control and runtime services so agent work, terminals, bundles, and dev servers run outside the web/API container
 - Real web terminals backed by PTY/xterm
 - `pi` CLI available inside the container terminal as the `agent` user
 - Pi package management with default packages for web access, subagents, processes, and context-mode
@@ -87,7 +88,7 @@ HARBOR_PORT=8080
 HARBOR_DEV_PROXY_PORTS=3000-3099,5173
 ```
 
-Harbor includes a private dev-server proxy for apps started by the agent inside the container. After logging in, open a dev server through Harbor at `/proxy/<port>/`, for example `http://localhost:8080/proxy/5173/`. Proxy targets are limited to `127.0.0.1` inside the container and to `HARBOR_DEV_PROXY_PORTS`.
+Harbor includes a private dev-server proxy for apps started by the agent inside the container. After logging in, open a dev server through Harbor at `/proxy/<port>/`, for example `http://localhost:8080/proxy/5173/`. Proxy targets are limited to `127.0.0.1` inside the runtime container and to `HARBOR_DEV_PROXY_PORTS`.
 
 Compose no longer publishes a broad dev-server port range to the host. Use the authenticated proxy path for private previews.
 

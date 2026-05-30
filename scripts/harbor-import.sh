@@ -5,6 +5,8 @@ backup=""
 yes=false
 start_after=true
 export COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-harbor}"
+source "$(dirname "$0")/harbor-env.sh"
+ensure_env_secret HARBOR_RUNTIME_TOKEN
 
 usage() {
   cat <<'USAGE'
@@ -83,9 +85,9 @@ if [[ "$yes" != true ]]; then
   fi
 fi
 
-docker compose stop harbor >/dev/null
+docker compose stop harbor harbor-runtime >/dev/null
 
-docker compose run --rm --no-deps --entrypoint sh harbor -c '
+docker compose run --rm --no-deps --entrypoint sh harbor-runtime -c '
   set -eu
   rm -rf /config/* /config/.[!.]* /config/..?* \
          /workspace/* /workspace/.[!.]* /workspace/..?* \
@@ -95,7 +97,7 @@ docker compose run --rm --no-deps --entrypoint sh harbor -c '
 ' < "$backup"
 
 if [[ "$start_after" == true ]]; then
-  docker compose up -d harbor >/dev/null
+  docker compose up -d harbor-runtime harbor >/dev/null
   echo "Harbor restored and started."
 else
   echo "Harbor restored. Start it with: docker compose up -d harbor"

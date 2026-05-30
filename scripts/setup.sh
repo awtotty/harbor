@@ -134,6 +134,8 @@ write_env() {
   upsert_env HARBOR_CONFIG_DIR /config
   upsert_env HARBOR_WORKSPACE_DIR /workspace
   upsert_env HARBOR_TERMINAL_USER agent
+  upsert_env HARBOR_RUNTIME_TOKEN "$(openssl rand -hex 32)"
+  upsert_env HARBOR_RUNTIME_URL http://harbor-runtime:8788
   upsert_env HARBOR_UPDATER_TOKEN "$(openssl rand -hex 32)"
   upsert_env HARBOR_UPDATER_URL http://harbor-updater:8787
   upsert_env PI_CODING_AGENT_DIR /config/pi-agent
@@ -144,7 +146,7 @@ start_harbor() {
   export HARBOR_VERSION="$(git describe --tags --exact-match 2>/dev/null || echo dev)"
   export HARBOR_COMMIT="$(git rev-parse --short HEAD 2>/dev/null || echo unknown)"
   export HARBOR_BUILT_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-  docker compose --profile updater up --build -d
+  docker compose up --build -d
 }
 
 main() {
@@ -186,7 +188,7 @@ main() {
   echo "  http://${HARBOR_SETUP_BIND_HOST}:8080/proxy/5173/"
   echo
   echo "Useful commands:"
-  echo "  docker compose --profile updater logs -f"
+  echo "  docker compose logs -f"
   echo "  scripts/harbor-export.sh -o backups/harbor.tgz"
 }
 
