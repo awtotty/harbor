@@ -4,7 +4,7 @@
       "id": "fml",
       "name": "FML CLI",
       "description": "Install the FML CLI from @fml-inc/fml.",
-      "npmGlobals": ["@fml-inc/fml"],
+      "npmGlobals": ["@fml-inc/fml@0"],
       "checkCommands": ["fml"]
     }
   ]

@@ -1,8 +1,8 @@
 {
   "packages": [
-    "npm:pi-web-access",
-    "npm:pi-subagents",
-    "npm:@aliou/pi-processes",
-    "npm:context-mode"
+    "npm:pi-web-access@0",
+    "npm:pi-subagents@0",
+    "npm:@aliou/pi-processes@0",
+    "npm:context-mode@1"
   ]
 }
