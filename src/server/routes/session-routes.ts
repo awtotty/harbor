@@ -1,10 +1,15 @@
 import type { FastifyInstance } from 'fastify';
-import { archiveSession, createSession, listMessages, listSessions, restoreSession } from '../db.js';
+import { archiveSession, createSession, hasMessagesBefore, listMessages, listSessions, restoreSession } from '../db.js';
 
 export async function registerSessionRoutes(app: FastifyInstance) {
   app.get('/api/sessions/:sessionId/messages', async (request) => {
     const { sessionId } = request.params as { sessionId: string };
-    return { messages: listMessages(sessionId) };
+    const query = request.query as { before?: string; beforeId?: string; limit?: string };
+    const limit = query.limit ? Number(query.limit) : undefined;
+    const before = query.before && query.beforeId ? { createdAt: query.before, id: query.beforeId } : undefined;
+    const messages = listMessages(sessionId, { before, limit });
+    const oldest = messages[0];
+    return { messages, hasMore: oldest ? hasMessagesBefore(sessionId, { createdAt: oldest.createdAt, id: oldest.id }) : false };
   });
 
   app.get('/api/sessions', async (request) => {
