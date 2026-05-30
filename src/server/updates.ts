@@ -112,7 +112,7 @@ async function fetchLatestTag(): Promise<LatestTag> {
     const data = await response.json() as Array<{ name?: string; commit?: { sha?: string; url?: string } }>;
     const tag = data.filter((candidate) => candidate.name?.startsWith('v')).sort((a, b) => compareTags(b.name ?? '', a.name ?? ''))[0];
     if (!tag?.name) throw new LatestTagNotFoundError();
-    return { tag: tag.name, url: `https://github.com/awtotty/harbor/releases/tag/${tag.name}`, commit: tag.commit?.sha?.slice(0, 7) };
+    return { tag: tag.name, url: `https://github.com/awtotty/harbor/tree/${tag.name}`, commit: tag.commit?.sha?.slice(0, 7) };
   } finally {
     clearTimeout(timeout);
   }

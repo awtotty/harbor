@@ -2,6 +2,7 @@
 set -euo pipefail
 
 ENV_FILE=.env
+export COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-harbor}"
 
 confirm() {
   local prompt="$1" default="${2:-Y}" answer
@@ -20,7 +21,7 @@ require_command() {
   echo
   echo "$command is not available."
   echo
-  echo "$message"
+  printf '%b\n' "$message"
   echo
   exit 1
 }
@@ -89,7 +90,7 @@ prompt_bind_host() {
     case "$choice" in
       1) HARBOR_SETUP_BIND_HOST="$tailscale_ip" ;;
       2) HARBOR_SETUP_BIND_HOST="127.0.0.1" ;;
-      3) read -r -p "Bind host/IP: " custom; HARBOR_SETUP_BIND_HOST="$custom" ;;
+      3) read -r -p "Bind host/IP: " custom; HARBOR_SETUP_BIND_HOST="${custom:?Bind host is required}" ;;
       *) echo "Invalid choice" >&2; exit 1 ;;
     esac
   else
@@ -99,7 +100,7 @@ prompt_bind_host() {
     choice="${choice:-1}"
     case "$choice" in
       1) HARBOR_SETUP_BIND_HOST="127.0.0.1" ;;
-      2) read -r -p "Bind host/IP: " custom; HARBOR_SETUP_BIND_HOST="$custom" ;;
+      2) read -r -p "Bind host/IP: " custom; HARBOR_SETUP_BIND_HOST="${custom:?Bind host is required}" ;;
       *) echo "Invalid choice" >&2; exit 1 ;;
     esac
   fi

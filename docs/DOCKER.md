@@ -59,7 +59,7 @@ harbor-config:    /config
 harbor-home:      /home/agent
 ```
 
-Use these for backups and migrations. The container image should be considered replaceable.
+Use these for backups and migrations. The container image should be considered replaceable. See [BACKUP_RESTORE.md](BACKUP_RESTORE.md) for one-command export and import scripts.
 
 Notable persistent files/directories:
 

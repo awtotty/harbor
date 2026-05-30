@@ -15,6 +15,7 @@ Harbor is not a hardened multi-tenant sandbox. Treat anyone with access to the w
 | Try Harbor locally with Docker | [Run with Docker](#run-with-docker) |
 | Deploy an always-on private instance | [`docs/VPS_TAILSCALE.md`](docs/VPS_TAILSCALE.md) |
 | Understand Docker settings and volumes | [`docs/DOCKER.md`](docs/DOCKER.md) |
+| Back up, restore, and move Harbor | [`docs/BACKUP_RESTORE.md`](docs/BACKUP_RESTORE.md) |
 | Understand what persists | [`docs/PERSISTENCE.md`](docs/PERSISTENCE.md) |
 | Develop Harbor without Docker | [Development without Docker](#development-without-docker) |
 
