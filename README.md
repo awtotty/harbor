@@ -26,14 +26,14 @@ Harbor is not a hardened multi-tenant sandbox. Treat anyone with access to the w
 - Tailscale or another trusted private access layer for always-on remote access.
 - Optional: a Telegram bot token if you want remote messaging from Telegram.
 
-## Prototype features
+## Features
 
 - TypeScript Fastify server
 - React/Vite lightweight web UI
 - Password-protected browser chat with live streaming responses
 - Pi SDK-backed sessions
 - SQLite app state and transcript storage
-- Shared Harbor commands in web and Telegram (`/help`, `/status`, `/sessions`, `/new [name]`)
+- Shared Harbor commands in web and Telegram (`/help`, `/status`, `/sessions`, `/new [name]`, `/update`)
 - Telegram bot integration for messaging your agent remotely
 - Real web terminals backed by PTY/xterm
 - `pi` CLI available inside the container terminal as the `agent` user
@@ -42,6 +42,8 @@ Harbor is not a hardened multi-tenant sandbox. Treat anyone with access to the w
 - Model provider auth and model selection
 - Environment editor writing `/config/harbor.env`
 - System status and structured observability events
+- Backup/export/restore scripts
+- External updater sidecar for System UI and `/update` command updates
 - Docker Compose deployment
 
 ## Run with Docker

@@ -1,20 +1,37 @@
 # Harbor Roadmap
 
-Harbor is an open-source, Docker-first, self-hostable Pi cloud agent appliance. The goal is to give an individual technical user an always-on personal AI computer they control: reachable from a private web UI, terminal, and messaging channels, with an optional hosted version later for convenience and managed compute.
+Harbor is an open-source, Docker-first, self-hostable Pi cloud agent appliance. It gives an individual technical user an always-on personal AI computer they control: reachable from a private web UI, terminal, and messaging channels, with persistent state and a safe update path.
 
 Harbor is intentionally a single-user, high-trust appliance. Multi-user/team access is not a current product goal.
 
 ## Current status
 
-- Phase 1 is mostly implemented and is being dogfooded.
-- Phase 2 documentation exists for Docker and VPS/Tailscale deployment, but restore steps, database/config inspection notes, and system UI polish remain incomplete.
-- Phases 3-5 are forward-looking.
+Harbor has moved from prototype into early self-hostable appliance dogfooding.
 
-## Phase 1: Personal Appliance Prototype
+The core appliance loop is implemented:
 
-Get Harbor working for a single power user on a local machine.
+- Docker Compose deployment
+- interactive setup with production-safe defaults
+- Pi SDK-backed web chat
+- Telegram bot access
+- persistent `/workspace`, `/config`, and `/home/agent` volumes
+- SQLite app state and transcript storage
+- real PTY web terminals
+- provider auth and model selection
+- Pi package management
+- optional capability bundles
+- backup/export/restore scripts
+- source-tag update flow
+- System UI and `/update` command backed by an external updater sidecar
+
+The remaining roadmap is now focused on ongoing polish, useful default bundles, and secure app hosting from Harbor instances.
+
+## Completed: Personal Appliance
+
+Harbor can now run as a personal appliance for one technical user.
 
 - [x] Docker Compose setup
+- [x] Interactive `scripts/setup.sh`
 - [x] Pi SDK-backed browser chat
 - [x] Persistent `/workspace`, `/config`, and `/home/agent` volumes
 - [x] SQLite app state and transcript storage
@@ -24,103 +41,98 @@ Get Harbor working for a single power user on a local machine.
 - [x] Real web terminal backed by PTY
 - [x] Multiple UI themes
 - [x] Telegram bot channel for messaging the agent
+- [x] Shared Harbor commands including `/help`, `/status`, `/sessions`, `/new`, and `/update`
+- [x] Capability bundle scaffolding
 
-Success means: one person can run Harbor locally, chat with Pi from the browser or Telegram, and use it for real work inside `/workspace`.
+## Completed: Self-Hosted Operations
 
-Status: mostly implemented; continue dogfooding and fixing friction.
+Harbor can be installed, backed up, restored, and updated without hand-editing containers.
 
-## Phase 2: VPS + Tailscale Always-On Deploy
-
-Deploy Harbor to a private VPS or home server behind Tailscale before broader product polish. This tests the core product hypothesis: an always-on personal agent appliance reachable privately from anywhere.
-
-- [x] VPS/home-server deployment guide for Ubuntu/Debian
-- [x] Docker and Docker Compose install steps
-- [x] Tailscale setup and MagicDNS guidance
+- [x] VPS/home-server deployment guidance
+- [x] Docker and Docker Compose install guidance
+- [x] Tailscale/private-network deployment guidance
 - [x] `.env`-based production configuration
-- [x] Compose settings for VPS use:
-  - [x] `restart: unless-stopped`
-  - [x] persistent named volumes
-  - [x] explicit password configuration
-- [x] Firewall guidance:
-  - [x] expose Harbor only over Tailscale
-- [ ] Backup and restore docs (partial):
-  - [x] `/config`
-  - [x] `/workspace`
-  - [x] `/home/agent`
-  - [ ] restore onto a fresh host
-- [ ] Operational runbook (partial):
-  - [x] update Harbor
-  - [x] restart Harbor
-  - [x] view logs
-  - [x] rebuild image
-  - [ ] inspect database/config
-- [ ] Tailscale-aware System UI if available:
-  - show Tailscale IP / hostname
-  - show suggested private URL
-- [x] Production safety checks:
-  - fail when `HARBOR_PASSWORD=harbor` in production mode
-  - document secret-bearing files in `/config`
+- [x] Production safety check for default password
+- [x] Persistent named volumes
+- [x] Backup/export script
+- [x] Import/restore script
+- [x] Fresh-host restore documentation
+- [x] Source-tag update script
+- [x] Version metadata in System UI
+- [x] External updater sidecar so Harbor can update from System UI or `/update` without giving the main container Docker access
+- [x] Operational docs for Docker, persistence, security, bundles, backup/restore, and updates
 
-Success means: Harbor can run unattended on a VPS or home server, survive restarts, and be reachable from the user's devices through Tailscale without exposing the web UI publicly.
+## Ongoing: UI Polish
 
-## Phase 3: Dogfood Hardening + Product Polish
+Use daily workflow friction to refine Harbor into something that feels calm, reliable, and appliance-like.
 
-Use daily workflow friction to harden the appliance.
+Examples:
 
-- Better error surfaces for chat, packages, Telegram, and provider auth
+- Better error surfaces for chat, packages, Telegram, provider auth, updater, and bundles
 - Telegram status in Config:
   - last poll
   - last message
   - last error
-- Telegram command polish:
-  - implemented today: `/help`, `/status`, `/sessions`, `/new [name]`
-  - planned: `/use <session>` and clearer working/status feedback
+- Telegram/session command polish:
+  - `/use <session>`
+  - clearer working/status feedback
 - Rename sessions
 - Archived sessions UI polish
 - Transcript search/export
+- Better files UX so Harbor feels like a small personal computer:
+  - file browser
+  - upload/download
+  - create/rename/delete files and folders
+  - open common text/markdown/log files from the browser
 - Mobile web polish
+- Keyboard navigation in the web app
 - PWA install support
 - Terminal UX polish:
   - names
   - reconnect behavior
   - cwd/status display
-- Robust dev-server reverse proxy:
-  - route Harbor-authenticated paths like `/proxy/:port/` to container-local agent-started apps
-  - support WebSocket/HMR where possible
-  - reduce reliance on Docker-published dev port ranges
 - Config reset actions:
   - reset Telegram token
   - clear auth/model config
 - Safer env editor
-- Better package install/update progress
+- Better package/bundle install progress
 
-Success means: Harbor feels reliable enough for everyday personal workflows, both from browser and phone.
+## Ongoing: Capability Bundles
 
-## Phase 4: Self-Host Hardening
+Keep the default image slim while making common toolsets easy to add from Config.
 
-Turn the dogfood prototype into a self-hosted tool another technical individual can deploy and trust without hand-holding.
+Near-term bundle ideas:
 
-- Clear setup documentation
-- Guided first-run checklist
-- Backup/export/restore support
-- Upgrade process
-- Better logging and diagnostics
-- Update distribution and lifecycle:
-  - publish versioned Docker images, e.g. `ghcr.io/awtotty/harbor:latest` and semver tags
-  - document manual source-checkout update flow
-  - show current/latest version in System UI
-  - support optional user-triggered updates through a small privileged updater sidecar rather than giving the main Harbor container direct Docker control
-  - consider Watchtower-compatible labels/config for users who want scheduled auto-updates or update notifications
-- Permission/security docs
-- Extension/package bundle management
-- Workspace/file inspection improvements
-- Optional OAuth or reverse-proxy auth docs for single-user deployments behind trusted access layers
+- Developer bundle:
+  - `lazygit`
+  - `neovim`/`nvim`
+  - language servers or formatters where appropriate
+  - common shell/dev utilities that are useful but not required in the base image
+- Cloud/devops bundle examples
+- Project-specific bundle examples
+- Better bundle status detection and uninstall behavior
+- Bundle tests and validation helpers
+- Documentation examples for custom installers
 
-Success means: a technical user can self-host Harbor without hand-holding and use it for real work.
+## Major Remaining Feature: Secure App Reverse Proxy
 
-## Phase 5: Hosted Utility Version
+Harbor should let the agent create and run web applications inside the container, then expose them securely through Harbor instead of relying on published dev port ranges.
+
+Goal:
+
+- route Harbor-authenticated paths like `/proxy/:port/` to container-local apps
+- support WebSocket/HMR where practical
+- keep apps private behind Harbor auth/Tailscale
+- reduce or eventually remove reliance on Docker-published `3000-3099`
+- make generated apps easy to open from chat, terminal, and System/UI affordances
+
+This is the most important remaining infrastructure feature because it turns Harbor from “agent plus terminal” into a safer remote app workspace.
+
+## Future: Hosted Utility Version
 
 Offer Harbor as a managed service while preserving the open-source self-hosted core.
+
+Possible future work:
 
 - Managed hosted personal instances
 - Persistent storage and backups
@@ -131,7 +143,7 @@ Offer Harbor as a managed service while preserving the open-source self-hosted c
 - Utility-style metered billing
 - Data export and migration path back to self-hosting
 
-Success means: users can either self-host Harbor for free or pay for managed convenience, uptime, and compute.
+Users should be able to self-host Harbor for free or pay for managed convenience, uptime, and compute.
 
 ## Deferred / Reconsider Later
 
