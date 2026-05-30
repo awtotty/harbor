@@ -8,7 +8,7 @@ Harbor is intended to run as a Docker appliance. The image contains the Harbor w
 scripts/setup.sh
 ```
 
-The setup script writes `.env`, starts Harbor, and configures update support for the System page and `/update` command.
+The setup script writes `.env`, starts Harbor, configures update support for the System page and `/update` command, and offers to run provider login inside the container so credentials are saved to the persistent `/config` volume before first use.
 
 For manual setup:
 

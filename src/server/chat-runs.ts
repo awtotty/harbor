@@ -96,7 +96,7 @@ function emitRun(run: ChatRunRecord, event: HarborEvent) {
 
 async function executeRun(run: ChatRunRecord, router: MessageRouter, message: string) {
   try {
-    const command = await handleHarborCommand({ text: message, channel: 'web', sessionId: run.sessionId });
+    const command = await handleHarborCommand({ text: message, channel: 'web', sessionId: run.sessionId, onProviderAuthChanged: () => router.resetSessions() });
     if (command) {
       if (command.sessionId) run.sessionId = command.sessionId;
       for (const event of command.events) emitRun(run, event);

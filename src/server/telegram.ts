@@ -134,7 +134,7 @@ async function handleUpdate(router: MessageRouter, log: Log, update: any, botTok
     setChannelActiveSession('telegram', identity, session.id);
     sessionId = session.id;
   }
-  const command = await handleHarborCommand({ text, channel: 'telegram', sessionId, identity });
+  const command = await handleHarborCommand({ text, channel: 'telegram', sessionId, identity, onProviderAuthChanged: () => router.resetSessions() });
   if (command) {
     await sendTelegramMessage(botToken, chatId, command.text);
     return;

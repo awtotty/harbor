@@ -33,7 +33,7 @@ Harbor is not a hardened multi-tenant sandbox. Treat anyone with access to the w
 - Password-protected browser chat with live streaming responses
 - Pi SDK-backed sessions
 - SQLite app state and transcript storage
-- Shared Harbor commands in web and Telegram (`/help`, `/status`, `/sessions`, `/new [name]`, `/update`)
+- Shared Harbor commands in web and Telegram (`/help`, `/status`, `/sessions`, `/new [name]`, `/login`, `/update`)
 - Telegram bot integration for messaging your agent remotely
 - Separate control and runtime services so agent work, terminals, bundles, and dev servers run outside the web/API container
 - Real web terminals backed by PTY/xterm
@@ -53,7 +53,7 @@ Harbor is not a hardened multi-tenant sandbox. Treat anyone with access to the w
 scripts/setup.sh
 ```
 
-The interactive setup writes `.env`, starts Harbor, and configures update support. Open the printed URL and log in with the password you chose.
+The interactive setup writes `.env`, starts Harbor, configures update support, and offers to run provider login inside the container so credentials are saved before first use. Open the printed URL and log in with the password you chose.
 
 Manual Docker start is also supported:
 
@@ -71,7 +71,7 @@ After the container is running:
 
 1. Log in to the web UI.
 2. Open Config/System.
-3. Configure provider auth and choose a model.
+3. Configure provider auth with `/login` or Config, and choose a model if needed.
 4. Check package/status surfaces for obvious setup errors.
 5. Send a short test prompt in Chat.
 6. If chat fails, check `/status`, the System page, and `docker compose logs -f harbor`.
@@ -175,6 +175,10 @@ Harbor intercepts shared commands before passing messages to Pi:
 - `/status` — show Harbor system status and recent errors
 - `/sessions` — list active sessions
 - `/new [name]` — create and switch/link to a new session
+- `/login` — list model provider login options
+- `/login <provider-id>` — start provider login from chat or Telegram
+- `/login status <login-id>` — check login progress
+- `/login input <login-id> <value>` — submit a manual redirect URL/code if requested
 
 These commands work from both the web UI and Telegram.
 
