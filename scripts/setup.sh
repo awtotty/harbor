@@ -178,8 +178,12 @@ main() {
   echo
   echo "Harbor setup complete."
   echo
-  echo "Open:"
+  echo "Open Harbor:"
   echo "  http://${HARBOR_SETUP_BIND_HOST}:8080"
+  echo
+  echo "Dev server previews use Harbor's authenticated reverse proxy, not host port publishing:"
+  echo "  http://${HARBOR_SETUP_BIND_HOST}:8080/proxy/3000/"
+  echo "  http://${HARBOR_SETUP_BIND_HOST}:8080/proxy/5173/"
   echo
   echo "Useful commands:"
   echo "  docker compose --profile updater logs -f"
