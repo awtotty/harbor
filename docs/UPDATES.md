@@ -17,7 +17,7 @@ After setup, users can update Harbor from:
 - System page → **Update**
 - web chat or Telegram → `/update`, then `/update confirm`
 
-The update creates a pre-update backup, checks out the latest tag, rebuilds Harbor with version metadata, restarts the Harbor container, and waits for `/healthz`.
+The update creates a pre-update backup, checks out the latest tag, rebuilds Harbor control/runtime services with version metadata, restarts them, and waits for `/healthz`.
 
 ## Security boundary
 
@@ -48,12 +48,12 @@ scripts/harbor-update.sh --target v0.1.0
 3. chooses the requested tag, or the latest `v*` tag
 4. creates a pre-update backup by default
 5. checks out the target tag detached
-6. rebuilds Harbor with version metadata
-7. stops the old Harbor container to release the published Harbor web port
-8. starts the updated Harbor container
+6. rebuilds Harbor control and runtime services with version metadata
+7. stops the old Harbor control/runtime containers to release published ports and runtime resources
+8. starts the updated runtime and control containers
 9. waits for `/healthz`
 
-The scripts default `COMPOSE_PROJECT_NAME=harbor` so the updater sidecar uses the same Compose project name from its `/deploy` mount as the host checkout does from the `harbor` directory.
+The scripts default `COMPOSE_PROJECT_NAME=harbor` so the updater sidecar uses the same Compose project name from its `/deploy` mount as the host checkout does from the `harbor` directory. They also backfill `HARBOR_RUNTIME_TOKEN` into `.env` when updating older installations that predate the runtime split.
 
 For dogfooding against `main`, you can still use the manual flow:
 

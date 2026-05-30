@@ -16,6 +16,8 @@ import { registerTelegramRoutes } from './routes/telegram-routes.js';
 import { recordStartupStatus, registerObservabilityRoutes } from './routes/observability-routes.js';
 import { registerDevProxy } from './dev-proxy.js';
 import { startTelegramBot } from './telegram.js';
+import { isRuntimeConfigured } from './runtime-config.js';
+import { registerRuntimeProxyRoutes } from './runtime-proxy.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = Fastify({ logger: true });
@@ -61,17 +63,22 @@ app.post('/api/logout', async (request, reply) => {
 });
 
 await ensureConfigDir();
-try {
-  await ensureDefaultPackages((event) => app.log.info({ event }, 'default package setup'));
-} catch (error) {
-  app.log.error({ error }, 'default package setup failed');
+if (!isRuntimeConfigured()) {
+  try {
+    await ensureDefaultPackages((event) => app.log.info({ event }, 'default package setup'));
+  } catch (error) {
+    app.log.error({ error }, 'default package setup failed');
+  }
 }
 
 await registerConfigRoutes(app);
 await registerProviderRoutes(app, routeContext);
-await registerPackageRoutes(app, routeContext);
+if (isRuntimeConfigured()) await registerRuntimeProxyRoutes(app, ['/api/packages', '/api/bundles', '/api/terminals']);
+else {
+  await registerPackageRoutes(app, routeContext);
+  await registerTerminalRoutes(app);
+}
 await registerSessionRoutes(app);
-await registerTerminalRoutes(app);
 await registerTelegramRoutes(app);
 await registerObservabilityRoutes(app);
 await registerChatRoutes(app, routeContext);

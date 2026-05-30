@@ -52,6 +52,8 @@ When `HARBOR_PRODUCTION=true`, Harbor refuses to start with the unsafe default p
 
 ## Volumes
 
+Compose runs Harbor as a control service plus a runtime service. The control service serves the web UI/API; the runtime service owns agent execution, terminals, bundles, and dev servers.
+
 Compose creates three persistent named volumes:
 
 ```yaml
@@ -117,7 +119,7 @@ http://localhost:8080/proxy/3000/
 http://localhost:8080/proxy/5173/
 ```
 
-The proxy requires Harbor auth and forwards only to `127.0.0.1:<port>` inside the container. Allowed ports are controlled by `HARBOR_DEV_PROXY_PORTS`, which defaults to `3000-3099,5173`. Harbor strips its own credentials before forwarding requests and drops upstream `Set-Cookie` headers from normal HTTP proxy responses so dev apps cannot capture or overwrite Harbor session cookies. This is intended for private previews and development, not public app hosting.
+The proxy requires Harbor auth and ultimately forwards only to `127.0.0.1:<port>` inside the runtime container. Allowed ports are controlled by `HARBOR_DEV_PROXY_PORTS`, which defaults to `3000-3099,5173`. Harbor strips its own credentials before forwarding requests and drops upstream `Set-Cookie` headers from normal HTTP proxy responses so dev apps cannot capture or overwrite Harbor session cookies. This is intended for private previews and development, not public app hosting.
 
 This is same-origin trusted preview mode. Frontend JavaScript served from `/proxy/<port>/` runs on the Harbor browser origin and is not browser-isolated from the Harbor UI/API, so only open dev apps you trust as part of your Harbor workspace. Public or untrusted app hosting is out of scope for this appliance runtime.
 

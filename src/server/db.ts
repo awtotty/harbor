@@ -63,6 +63,8 @@ export type ChannelState = {
 const dbPath = `${configDir}/harbor.db`;
 mkdirSync(dirname(dbPath), { recursive: true });
 const db = new DatabaseSync(dbPath);
+db.exec('pragma journal_mode = WAL');
+db.exec('pragma busy_timeout = 5000');
 
 db.exec(`
   create table if not exists sessions (

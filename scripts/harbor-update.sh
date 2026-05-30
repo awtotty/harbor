@@ -6,6 +6,8 @@ yes=false
 backup=true
 backup_path=""
 export COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-harbor}"
+source "$(dirname "$0")/harbor-env.sh"
+ensure_env_secret HARBOR_RUNTIME_TOKEN
 
 usage() {
   cat <<'USAGE'
@@ -115,10 +117,10 @@ docker compose build \
   --build-arg HARBOR_VERSION="$HARBOR_VERSION" \
   --build-arg HARBOR_COMMIT="$HARBOR_COMMIT" \
   --build-arg HARBOR_BUILT_AT="$HARBOR_BUILT_AT" \
-  harbor
+  harbor harbor-runtime
 
-docker compose stop harbor
-docker compose up -d harbor
+docker compose stop harbor harbor-runtime
+docker compose up -d harbor-runtime harbor
 
 echo "Waiting for Harbor health check..."
 for _ in $(seq 1 30); do

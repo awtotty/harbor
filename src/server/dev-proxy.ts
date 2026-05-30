@@ -3,6 +3,8 @@ import net from 'node:net';
 import type { Duplex } from 'node:stream';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { isAuthToken } from './auth.js';
+import { isRuntimeConfigured, runtimeHeaders, runtimeUrl } from './runtime-config.js';
+import { proxyRuntimeRequest } from './runtime-proxy.js';
 
 const DEFAULT_DEV_PROXY_PORTS = '3000-3099,5173';
 const HOP_BY_HOP_HEADERS = new Set([
@@ -49,6 +51,7 @@ export async function registerDevProxy(app: FastifyInstance) {
     }
     const { port, path } = parseProxyRequest(request);
     if (!allowedPorts.has(port)) return reply.code(404).send({ error: 'Dev proxy port is not allowed' });
+    if (isRuntimeConfigured()) return proxyRuntimeRequest(request, reply, `/internal/dev-proxy/${port}${path}`);
     return proxyHttpRequest(request, reply, port, path);
   });
 
@@ -68,6 +71,25 @@ export async function registerDevProxy(app: FastifyInstance) {
       socket.destroy();
       return;
     }
+    if (isRuntimeConfigured()) return proxyRuntimeWebSocketUpgrade(request, socket, head, parsed.port, parsed.path);
+    proxyWebSocketUpgrade(request, socket, head, parsed.port, parsed.path);
+  });
+}
+
+export async function registerRuntimeDevProxy(app: FastifyInstance) {
+  const allowedPorts = allowedDevProxyPorts();
+  const runtimeToken = process.env.HARBOR_RUNTIME_TOKEN ?? '';
+  app.all('/internal/dev-proxy/:port/*', async (request, reply) => {
+    const { port, path } = parseInternalProxyRequest(request);
+    if (!allowedPorts.has(port)) return reply.code(404).send({ error: 'Dev proxy port is not allowed' });
+    return proxyHttpRequest(request, reply, port, path);
+  });
+  app.server.on('upgrade', (request, socket, head) => {
+    const parsed = parseInternalProxyUrl(request.url ?? '');
+    if (!parsed || !allowedPorts.has(parsed.port) || request.headers['x-harbor-runtime-token'] !== runtimeToken) {
+      socket.destroy();
+      return;
+    }
     proxyWebSocketUpgrade(request, socket, head, parsed.port, parsed.path);
   });
 }
@@ -81,9 +103,28 @@ function parseProxyRequest(request: FastifyRequest): { port: number; path: strin
   };
 }
 
+function parseInternalProxyRequest(request: FastifyRequest): { port: number; path: string } {
+  const params = request.params as { port?: string; '*': string };
+  const parsed = parseInternalProxyUrl(request.raw.url ?? '');
+  return {
+    port: Number(params.port),
+    path: parsed?.path ?? `/${params['*'] ?? ''}`,
+  };
+}
+
 function parseProxyUrl(url: string): { port: number; path: string } | undefined {
   const parsed = new URL(url, 'http://harbor.local');
   const match = parsed.pathname.match(/^\/proxy\/(\d+)(?:\/(.*))?$/);
+  if (!match) return undefined;
+  const port = Number(match[1]);
+  const rest = match[2] ?? '';
+  const path = `/${rest}${parsed.search}`;
+  return { port, path };
+}
+
+function parseInternalProxyUrl(url: string): { port: number; path: string } | undefined {
+  const parsed = new URL(url, 'http://harbor-runtime.local');
+  const match = parsed.pathname.match(/^\/internal\/dev-proxy\/(\d+)(?:\/(.*))?$/);
   if (!match) return undefined;
   const port = Number(match[1]);
   const rest = match[2] ?? '';
@@ -122,6 +163,28 @@ async function proxyHttpRequest(request: FastifyRequest, reply: FastifyReply, po
 
     writeRequestBody(request, upstream);
   });
+}
+
+function proxyRuntimeWebSocketUpgrade(request: http.IncomingMessage, socket: Duplex, head: Buffer, port: number, path: string) {
+  if (!runtimeUrl) return socket.destroy();
+  const target = new URL(runtimeUrl);
+  const runtimePort = Number(target.port || (target.protocol === 'https:' ? 443 : 80));
+  const upstream = net.connect(runtimePort, target.hostname, () => {
+    const headers = forwardedUpgradeHeaders(request.headers, port);
+    Object.assign(headers, runtimeHeaders());
+    upstream.write(`${request.method ?? 'GET'} /internal/dev-proxy/${port}${path} HTTP/${request.httpVersion}\r\n`);
+    for (const [key, value] of Object.entries(headers)) {
+      if (Array.isArray(value)) {
+        for (const item of value) upstream.write(`${key}: ${item}\r\n`);
+      } else if (value !== undefined) {
+        upstream.write(`${key}: ${value}\r\n`);
+      }
+    }
+    upstream.write('\r\n');
+    if (head.length > 0) upstream.write(head);
+    socket.pipe(upstream).pipe(socket);
+  });
+  upstream.on('error', () => socket.destroy());
 }
 
 function proxyWebSocketUpgrade(request: http.IncomingMessage, socket: Duplex, head: Buffer, port: number, path: string) {

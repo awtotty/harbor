@@ -134,6 +134,8 @@ write_env() {
   upsert_env HARBOR_CONFIG_DIR /config
   upsert_env HARBOR_WORKSPACE_DIR /workspace
   upsert_env HARBOR_TERMINAL_USER agent
+  upsert_env HARBOR_RUNTIME_TOKEN "$(openssl rand -hex 32)"
+  upsert_env HARBOR_RUNTIME_URL http://harbor-runtime:8788
   upsert_env HARBOR_UPDATER_TOKEN "$(openssl rand -hex 32)"
   upsert_env HARBOR_UPDATER_URL http://harbor-updater:8787
   upsert_env PI_CODING_AGENT_DIR /config/pi-agent
